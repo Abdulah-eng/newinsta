@@ -10,6 +10,7 @@ import Index from "./pages/Index";
 import Membership from "./pages/Membership";
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
+import PaymentSuccess from "./pages/PaymentSuccess";
 import MemberPortal from "./pages/portal/MemberPortal";
 import Feed from "./pages/portal/Feed";
 import Profile from "./pages/portal/Profile";
@@ -43,6 +44,7 @@ const App = () => (
               } />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<SignUp />} />
+              <Route path="/payment-success" element={<PaymentSuccess />} />
               
               {/* Member portal routes */}
               <Route path="/portal" element={

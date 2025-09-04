@@ -19,10 +19,17 @@ interface AuthContextType {
   profile: Profile | null
   session: Session | null
   loading: boolean
+  subscribed: boolean
+  subscriptionTier: string | null
+  subscriptionEnd: string | null
+  subscriptionLoading: boolean
   signUp: (email: string, password: string, fullName: string) => Promise<void>
   signIn: (email: string, password: string) => Promise<void>
   signOut: () => Promise<void>
   updateProfile: (updates: Partial<Profile>) => Promise<void>
+  checkSubscription: () => Promise<void>
+  createCheckout: () => Promise<void>
+  manageSubscription: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -40,6 +47,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
+  const [subscribed, setSubscribed] = useState(false)
+  const [subscriptionTier, setSubscriptionTier] = useState<string | null>(null)
+  const [subscriptionEnd, setSubscriptionEnd] = useState<string | null>(null)
+  const [subscriptionLoading, setSubscriptionLoading] = useState(false)
   const { toast } = useToast()
 
   const getProfile = async (userId: string) => {
@@ -136,6 +147,99 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }
 
+  const checkSubscription = async () => {
+    if (!session?.access_token) return
+
+    try {
+      setSubscriptionLoading(true)
+      const { data, error } = await supabase.functions.invoke('check-subscription', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      })
+
+      if (error) throw error
+
+      setSubscribed(data.subscribed || false)
+      setSubscriptionTier(data.subscription_tier || null)
+      setSubscriptionEnd(data.subscription_end || null)
+    } catch (error: any) {
+      console.error('Error checking subscription:', error)
+    } finally {
+      setSubscriptionLoading(false)
+    }
+  }
+
+  const createCheckout = async () => {
+    if (!session?.access_token) {
+      toast({
+        title: "Error",
+        description: "Please log in to subscribe.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      })
+
+      if (error) throw error
+
+      // Open Stripe checkout in a new tab
+      window.open(data.url, '_blank')
+
+      toast({
+        title: "Redirecting to checkout",
+        description: "Opening Stripe checkout in a new tab.",
+      })
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create checkout session.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const manageSubscription = async () => {
+    if (!session?.access_token) {
+      toast({
+        title: "Error",
+        description: "Please log in to manage your subscription.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke('customer-portal', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      })
+
+      if (error) throw error
+
+      // Open customer portal in a new tab
+      window.open(data.url, '_blank')
+
+      toast({
+        title: "Redirecting to customer portal",
+        description: "Opening Stripe customer portal in a new tab.",
+      })
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to open customer portal.",
+        variant: "destructive",
+      })
+    }
+  }
+
   const updateProfile = async (updates: Partial<Profile>) => {
     if (!user) return
 
@@ -171,6 +275,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       if (session?.user) {
         getProfile(session.user.id).then(setProfile)
+        // Check subscription status after setting user
+        setTimeout(() => {
+          checkSubscription()
+        }, 100)
       }
       
       setLoading(false)
@@ -185,8 +293,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (session?.user) {
           const profile = await getProfile(session.user.id)
           setProfile(profile)
+          // Check subscription status when user logs in
+          setTimeout(() => {
+            checkSubscription()
+          }, 100)
         } else {
           setProfile(null)
+          setSubscribed(false)
+          setSubscriptionTier(null)
+          setSubscriptionEnd(null)
         }
         
         setLoading(false)
@@ -201,10 +316,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     profile,
     session,
     loading,
+    subscribed,
+    subscriptionTier,
+    subscriptionEnd,
+    subscriptionLoading,
     signUp,
     signIn,
     signOut,
     updateProfile,
+    checkSubscription,
+    createCheckout,
+    manageSubscription,
   }
 
   return (

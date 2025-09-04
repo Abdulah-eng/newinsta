@@ -4,7 +4,7 @@ import { Outlet } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
 const MemberPortal = () => {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, subscribed } = useAuth();
 
   if (loading) {
     return (
@@ -19,11 +19,21 @@ const MemberPortal = () => {
       <div className="min-h-screen flex w-full bg-black">
         <MemberPortalSidebar />
         <main className="flex-1">
-          <header className="h-16 flex items-center border-b border-gold/20 bg-charcoal px-6">
-            <SidebarTrigger className="text-gold hover:text-gold-light" />
-            <h2 className="ml-4 text-xl font-serif text-gold">
-              Welcome back, {profile?.full_name || user?.email}
-            </h2>
+          <header className="h-16 flex items-center justify-between border-b border-gold/20 bg-charcoal px-6">
+            <div className="flex items-center space-x-4">
+              <SidebarTrigger className="text-gold hover:text-gold-light" />
+              <h2 className="text-xl font-serif text-gold">
+                Welcome back, {profile?.full_name || user?.email}
+              </h2>
+            </div>
+            
+            {/* Subscription Status Indicator */}
+            <div className="flex items-center space-x-2">
+              <div className={`w-2 h-2 rounded-full ${subscribed ? 'bg-green-500' : 'bg-yellow-500'}`} />
+              <span className={`text-sm font-medium ${subscribed ? 'text-green-500' : 'text-yellow-500'}`}>
+                {subscribed ? 'Premium Member' : 'Free Access'}
+              </span>
+            </div>
           </header>
           <div className="p-6">
             <Outlet />
