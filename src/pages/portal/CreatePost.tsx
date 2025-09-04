@@ -138,6 +138,9 @@ const CreatePost = ({ onPostCreated }: { onPostCreated?: () => void }) => {
             <p className="text-white/60 mb-4">
               You need an active subscription to create posts and interact with the community.
             </p>
+            <p className="text-white/40 text-sm mb-4">
+              Debug: subscribed = {subscribed ? 'true' : 'false'}, user = {user ? 'logged in' : 'not logged in'}
+            </p>
             <Button 
               onClick={() => window.location.href = '/membership'}
               className="bg-gold hover:bg-gold-light text-black font-semibold"
