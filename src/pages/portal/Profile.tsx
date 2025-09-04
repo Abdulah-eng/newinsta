@@ -1,73 +1,95 @@
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Settings, Grid, Heart, MessageCircle } from "lucide-react";
-import { useState } from "react";
+import { Edit, Settings, Grid, Heart, MessageCircle, RefreshCw } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
+import EditProfileModal from "@/components/EditProfileModal";
+
+interface UserPost {
+  id: string;
+  content: string;
+  image_url?: string;
+  is_nsfw: boolean;
+  created_at: string;
+}
 
 const Profile = () => {
-  // TODO: Replace with actual user data from Supabase
-  const [user] = useState({
-    name: "Alexandra Stone",
-    handle: "@alexandra",
-    bio: "Entrepreneur • Art Collector • Wine Enthusiast\nMember since March 2024",
-    avatar: "/api/placeholder/120/120",
-    verified: true,
-    membershipLevel: "Founder",
-    posts: 42,
-    following: 156,
-    followers: 289
-  });
+  const [userPosts, setUserPosts] = useState<UserPost[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { user, profile, subscribed, subscriptionTier, checkSubscription } = useAuth();
+  const { toast } = useToast();
 
-  const [posts] = useState([
-    {
-      id: 1,
-      image: "/api/placeholder/300/300",
-      likes: 24,
-      comments: 8,
-      isNSFW: false
-    },
-    {
-      id: 2,
-      image: "/api/placeholder/300/300",
-      likes: 45,
-      comments: 12,
-      isNSFW: true
-    },
-    {
-      id: 3,
-      image: "/api/placeholder/300/300",
-      likes: 67,
-      comments: 15,
-      isNSFW: false
-    },
-    {
-      id: 4,
-      image: "/api/placeholder/300/300",
-      likes: 33,
-      comments: 6,
-      isNSFW: false
-    },
-    {
-      id: 5,
-      image: "/api/placeholder/300/300",
-      likes: 51,
-      comments: 9,
-      isNSFW: true
-    },
-    {
-      id: 6,
-      image: "/api/placeholder/300/300",
-      likes: 78,
-      comments: 21,
-      isNSFW: false
+  const fetchUserPosts = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('posts')
+        .select('*')
+        .eq('author_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setUserPosts(data || []);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to load your posts.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
-  ]);
-
-  const handleEditProfile = () => {
-    // TODO: Implement profile editing
-    alert("Profile editing coming with backend integration!");
   };
+
+  useEffect(() => {
+    fetchUserPosts();
+  }, [user]);
+
+  const handleProfileUpdated = () => {
+    // Refresh subscription status and profile data
+    checkSubscription();
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long'
+    });
+  };
+
+  const getMembershipLevel = () => {
+    if (!subscribed) return "Free Member";
+    return subscriptionTier === "premium" ? "Premium Member" : "Elite Member";
+  };
+
+  const getMembershipBadgeColor = () => {
+    if (!subscribed) return "bg-gray-500 text-white";
+    return subscriptionTier === "premium" ? "bg-gold text-black" : "bg-gradient-to-r from-purple-400 to-purple-600 text-white";
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-gold text-xl font-serif">Loading profile...</div>
+      </div>
+    );
+  }
+
+  if (!user || !profile) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-gold text-xl font-serif mb-4">Profile not found</div>
+          <p className="text-white/60">Please try refreshing the page.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto p-6">
@@ -76,9 +98,9 @@ const Profile = () => {
         <CardContent className="p-6">
           <div className="flex flex-col md:flex-row items-start md:items-center space-y-4 md:space-y-0 md:space-x-6">
             <Avatar className="w-32 h-32 border-2 border-gold/30">
-              <AvatarImage src={user.avatar} />
+              <AvatarImage src={profile.avatar_url || ''} />
               <AvatarFallback className="bg-gold/20 text-gold text-2xl">
-                {user.name.split(' ').map(n => n[0]).join('')}
+                {profile.full_name?.split(' ').map(n => n[0]).join('') || user.email?.charAt(0) || 'U'}
               </AvatarFallback>
             </Avatar>
 
@@ -86,54 +108,68 @@ const Profile = () => {
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <div className="flex items-center space-x-3 mb-2">
-                    <h1 className="text-2xl font-semibold text-white">{user.name}</h1>
-                    {user.verified && (
-                      <Badge className="bg-gold/20 text-gold border-gold/30">
-                        Verified
+                    <h1 className="text-2xl font-semibold text-white">
+                      {profile.full_name || user.email}
+                    </h1>
+                    {subscribed && (
+                      <Badge className="bg-green-500/20 text-green-500 border-green-500/30">
+                        Verified Member
                       </Badge>
                     )}
                   </div>
-                  <p className="text-white/60">{user.handle}</p>
-                  <Badge className="bg-gold text-black font-medium mt-2">
-                    {user.membershipLevel} Member
+                  <p className="text-white/60">@{profile.full_name?.toLowerCase().replace(/\s+/g, '') || 'member'}</p>
+                  <Badge className={`${getMembershipBadgeColor()} font-medium mt-2`}>
+                    {getMembershipLevel()}
                   </Badge>
                 </div>
                 
                 <div className="flex space-x-2">
+                  <EditProfileModal onProfileUpdated={handleProfileUpdated}>
+                    <Button
+                      variant="outline"
+                      className="border-gold/50 text-gold hover:bg-gold/20"
+                    >
+                      <Edit className="mr-2 h-4 w-4" />
+                      Edit Profile
+                    </Button>
+                  </EditProfileModal>
                   <Button
-                    onClick={handleEditProfile}
+                    onClick={checkSubscription}
                     variant="outline"
                     className="border-gold/50 text-gold hover:bg-gold/20"
                   >
-                    <Edit className="mr-2 h-4 w-4" />
-                    Edit Profile
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="border-gold/50 text-gold hover:bg-gold/20"
-                  >
-                    <Settings className="h-4 w-4" />
+                    <RefreshCw className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
 
               <div className="flex space-x-8 text-center">
                 <div>
-                  <div className="text-xl font-bold text-white">{user.posts}</div>
+                  <div className="text-xl font-bold text-white">{userPosts.length}</div>
                   <div className="text-white/60 text-sm">Posts</div>
                 </div>
                 <div>
-                  <div className="text-xl font-bold text-white">{user.followers}</div>
-                  <div className="text-white/60 text-sm">Followers</div>
+                  <div className="text-xl font-bold text-white">
+                    {subscribed ? "Active" : "Inactive"}
+                  </div>
+                  <div className="text-white/60 text-sm">Subscription</div>
                 </div>
                 <div>
-                  <div className="text-xl font-bold text-white">{user.following}</div>
-                  <div className="text-white/60 text-sm">Following</div>
+                  <div className="text-xl font-bold text-white">
+                    {profile.created_at ? formatDate(profile.created_at) : "Recently"}
+                  </div>
+                  <div className="text-white/60 text-sm">Member Since</div>
                 </div>
               </div>
 
-              <div className="text-white/80 whitespace-pre-line">
-                {user.bio}
+              <div className="text-white/80">
+                <p>{profile.full_name ? `Welcome to Echelon Texas, ${profile.full_name.split(' ')[0]}!` : 'Welcome to Echelon Texas!'}</p>
+                <p className="text-white/60 text-sm mt-1">
+                  {subscribed 
+                    ? "Thank you for being a premium member of our exclusive community." 
+                    : "Join our premium membership to unlock all features."
+                  }
+                </p>
               </div>
             </div>
           </div>
@@ -143,45 +179,75 @@ const Profile = () => {
       {/* Posts Grid */}
       <Card className="bg-charcoal border-gold/20">
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-gold font-serif">Posts</CardTitle>
-          <Grid className="w-5 h-5 text-gold" />
+          <CardTitle className="text-gold font-serif">Your Posts</CardTitle>
+          <div className="flex items-center space-x-2">
+            <Button
+              onClick={fetchUserPosts}
+              variant="ghost"
+              size="sm"
+              className="text-gold hover:text-gold-light"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </Button>
+            <Grid className="w-5 h-5 text-gold" />
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {posts.map((post) => (
-              <div key={post.id} className="relative group cursor-pointer">
-                <div className="aspect-square bg-black/30 rounded-lg overflow-hidden">
-                  {post.isNSFW ? (
-                    <div className="w-full h-full bg-black/60 flex items-center justify-center">
-                      <div className="text-center">
-                        <div className="text-white/60 text-sm mb-2">NSFW Content</div>
-                        <div className="text-xs text-white/40">Tap to view</div>
+          {userPosts.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="text-white/60 mb-4">You haven't created any posts yet.</div>
+              <Button
+                onClick={() => window.location.href = '/portal/create'}
+                className="bg-gold hover:bg-gold-light text-black font-semibold"
+              >
+                Create Your First Post
+              </Button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {userPosts.map((post) => (
+                <div key={post.id} className="relative group cursor-pointer">
+                  <div className="aspect-square bg-black/30 rounded-lg overflow-hidden">
+                    {post.image_url ? (
+                      post.is_nsfw ? (
+                        <div className="w-full h-full bg-black/60 flex items-center justify-center">
+                          <div className="text-center">
+                            <div className="text-white/60 text-sm mb-2">NSFW Content</div>
+                            <div className="text-xs text-white/40">Tap to view</div>
+                          </div>
+                        </div>
+                      ) : (
+                        <img 
+                          src={post.image_url} 
+                          alt="Your post" 
+                          className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                        />
+                      )
+                    ) : (
+                      <div className="w-full h-full bg-charcoal/50 flex items-center justify-center p-4">
+                        <p className="text-white/80 text-sm text-center line-clamp-4">
+                          {post.content}
+                        </p>
                       </div>
-                    </div>
-                  ) : (
-                    <img 
-                      src={post.image} 
-                      alt="Post" 
-                      className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                    />
-                  )}
-                </div>
-                
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/60 transition-colors rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
-                  <div className="flex items-center space-x-4 text-white">
-                    <div className="flex items-center space-x-1">
-                      <Heart className="w-5 h-5" />
-                      <span>{post.likes}</span>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <MessageCircle className="w-5 h-5" />
-                      <span>{post.comments}</span>
+                    )}
+                  </div>
+                  
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/60 transition-colors rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
+                    <div className="text-white text-center">
+                      <div className="text-xs text-white/80 mb-1">
+                        {new Date(post.created_at).toLocaleDateString()}
+                      </div>
+                      {post.is_nsfw && (
+                        <Badge variant="destructive" className="text-xs">
+                          NSFW
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
