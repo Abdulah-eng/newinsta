@@ -48,9 +48,9 @@ const SignUp = () => {
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-6">
-      <Card className="w-full max-w-md bg-charcoal border-gold/20">
+      <Card className="w-full max-w-md bg-card border-border">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-serif text-gold">Join Echelon Texas</CardTitle>
+          <CardTitle className="text-2xl font-serif text-primary">Join Echelon Texas</CardTitle>
           <CardDescription className="text-white/70">
             Create your exclusive membership account
           </CardDescription>
@@ -64,7 +64,7 @@ const SignUp = () => {
                 type="text"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="bg-black border-gold/30 text-white focus:border-gold"
+                className="bg-black border-primary/30 text-white focus:border-primary"
                 placeholder="Your full name"
                 required
               />
@@ -76,7 +76,7 @@ const SignUp = () => {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="bg-black border-gold/30 text-white focus:border-gold"
+                className="bg-black border-primary/30 text-white focus:border-primary"
                 placeholder="your@email.com"
                 required
               />
@@ -88,7 +88,7 @@ const SignUp = () => {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="bg-black border-gold/30 text-white focus:border-gold"
+                className="bg-black border-primary/30 text-white focus:border-primary"
                 placeholder="••••••••"
                 required
               />
@@ -100,7 +100,7 @@ const SignUp = () => {
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="bg-black border-gold/30 text-white focus:border-gold"
+                className="bg-black border-primary/30 text-white focus:border-primary"
                 placeholder="••••••••"
                 required
               />
@@ -108,7 +108,7 @@ const SignUp = () => {
             <Button 
               type="submit" 
               disabled={loading}
-              className="w-full bg-gold hover:bg-gold-light text-black font-bold py-3 text-lg disabled:opacity-50 shadow-lg"
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-3 text-lg disabled:opacity-50 shadow-lg"
             >
               {loading ? "Creating Account..." : "Create Account"}
             </Button>
@@ -117,7 +117,7 @@ const SignUp = () => {
           <div className="mt-6 text-center">
             <div className="text-white/60 text-sm">
               Already have an account?{" "}
-              <Link to="/login" className="text-gold hover:text-gold-light">
+              <Link to="/login" className="text-primary hover:text-primary/80">
                 Sign in here
               </Link>
             </div>

@@ -46,7 +46,7 @@ const Membership = () => {
     <div className="min-h-screen bg-black pt-20">
       <div className="max-w-4xl mx-auto px-6 py-16">
         <div className="text-center mb-16">
-          <h1 className="text-5xl md:text-6xl font-serif text-gold mb-6">
+          <h1 className="text-5xl md:text-6xl font-serif text-primary mb-6">
             {subscribed ? "Your Membership" : "Join Echelon Texas"}
           </h1>
           <p className="text-xl text-white/80 max-w-2xl mx-auto">
@@ -58,7 +58,7 @@ const Membership = () => {
           
           {/* Subscription Status Display */}
           {user && (
-            <div className="mt-8 p-4 rounded-lg bg-charcoal/50 border border-gold/20 max-w-md mx-auto">
+            <div className="mt-8 p-4 rounded-lg bg-card/50 border border-primary/20 max-w-md mx-auto">
               <div className="flex items-center justify-center space-x-2 mb-2">
                 <div className={`w-3 h-3 rounded-full ${subscribed ? 'bg-green-500' : 'bg-yellow-500'}`} />
                 <span className="text-white font-medium">
@@ -75,7 +75,7 @@ const Membership = () => {
                 disabled={subscriptionLoading}
                 variant="ghost"
                 size="sm"
-                className="mt-2 text-gold hover:text-gold-light"
+                className="mt-2 text-primary hover:text-primary/80"
               >
                 {subscriptionLoading ? (
                   <>
@@ -95,14 +95,14 @@ const Membership = () => {
 
         <div className="grid md:grid-cols-2 gap-12 items-start">
           {/* Membership Card */}
-          <Card className={`bg-charcoal shadow-xl ${subscribed ? 'border-green-500/30' : 'border-gold/30'}`}>
+          <Card className={`bg-card shadow-xl ${subscribed ? 'border-green-500/30' : 'border-primary/30'}`}>
             <CardHeader className="text-center pb-8">
               <div className={`w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center ${
-                subscribed ? 'bg-green-500/20' : 'bg-gold/20'
+                subscribed ? 'bg-green-500/20' : 'bg-primary/20'
               }`}>
-                <Crown className={`w-8 h-8 ${subscribed ? 'text-green-500' : 'text-gold'}`} />
+                <Crown className={`w-8 h-8 ${subscribed ? 'text-green-500' : 'text-primary'}`} />
               </div>
-              <CardTitle className={`text-3xl font-serif ${subscribed ? 'text-green-500' : 'text-gold'}`}>
+              <CardTitle className={`text-3xl font-serif ${subscribed ? 'text-green-500' : 'text-primary'}`}>
                 {subscribed ? '✓ Active Member' : 'Digital Membership'}
               </CardTitle>
               <CardDescription className="text-white/70 text-lg">
@@ -124,19 +124,19 @@ const Membership = () => {
               {!user ? (
                 <div className="space-y-4">
                   <Link to="/login">
-                    <Button className="w-full bg-gold hover:bg-gold-light text-black font-semibold py-6 text-lg">
+                    <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-6 text-lg">
                       Sign In to Subscribe
                     </Button>
                   </Link>
                   <p className="text-white/60 text-center text-sm">
-                    Don't have an account? <Link to="/signup" className="text-gold hover:underline">Sign up here</Link>
+                    Don't have an account? <Link to="/signup" className="text-primary hover:underline">Sign up here</Link>
                   </p>
                 </div>
               ) : subscribed ? (
                 <div className="space-y-4">
                   <Button 
                     onClick={manageSubscription}
-                    className="w-full bg-gold hover:bg-gold-light text-black font-semibold py-6 text-lg"
+                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-6 text-lg"
                     size="lg"
                   >
                     Manage Subscription
@@ -144,7 +144,7 @@ const Membership = () => {
                   <Link to="/portal">
                     <Button 
                       variant="outline" 
-                      className="w-full border-gold text-gold hover:bg-gold hover:text-black"
+                      className="w-full border-primary text-primary hover:bg-primary hover:text-primary-foreground"
                     >
                       Go to Member Portal
                     </Button>
@@ -153,7 +153,7 @@ const Membership = () => {
               ) : (
                 <Button 
                   onClick={handleSubscribe}
-                  className="w-full bg-gold hover:bg-gold-light text-black font-semibold py-6 text-lg"
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-6 text-lg"
                   size="lg"
                 >
                   Join Echelon TX Now
@@ -168,20 +168,20 @@ const Membership = () => {
 
           {/* Features List */}
           <div className="space-y-8">
-            <h3 className="text-2xl font-serif text-gold mb-6">
+            <h3 className="text-2xl font-serif text-primary mb-6">
               What's Included
             </h3>
             
             <div className="space-y-4">
               {features.map((feature, index) => (
                 <div key={index} className="flex items-start space-x-3">
-                  <Check className="w-5 h-5 text-gold mt-0.5 flex-shrink-0" />
+                  <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
                   <span className="text-white/80">{feature}</span>
                 </div>
               ))}
             </div>
 
-            <div className="pt-8 border-t border-gold/20">
+            <div className="pt-8 border-t border-primary/20">
               <h4 className="text-lg font-semibold text-white mb-4">
                 Coming Soon: Physical Club
               </h4>
