@@ -270,33 +270,44 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     let mounted = true;
+    console.log('AuthContext: Initial useEffect started');
     
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('AuthContext: Got session:', !!session, session?.user?.email);
       if (!mounted) return;
       
       setSession(session)
       setUser(session?.user ?? null)
       
       if (session?.user) {
+        console.log('AuthContext: Getting profile for user:', session.user.id);
         getProfile(session.user.id).then(profile => {
+          console.log('AuthContext: Got profile:', !!profile);
           if (!mounted) return;
           setProfile(profile);
         });
         // Check subscription status after setting user
         setTimeout(() => {
           if (!mounted) return;
+          console.log('AuthContext: Calling checkSubscription');
           checkSubscription();
         }, 100);
+      } else {
+        console.log('AuthContext: No user, setting loading to false');
       }
       
+      console.log('AuthContext: Setting loading to false');
       setLoading(false);
     }).catch((error) => {
       console.error('AuthContext: Error getting session:', error);
       if (mounted) setLoading(false);
     });
 
-    return () => { mounted = false; };
+    return () => { 
+      console.log('AuthContext: Cleaning up initial useEffect');
+      mounted = false; 
+    };
   }, []);
 
   useEffect(() => {
