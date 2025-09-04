@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -15,7 +16,7 @@ const CreatePost = ({ onPostCreated }: { onPostCreated?: () => void }) => {
   const [image, setImage] = useState<File | null>(null);
   const [isNsfw, setIsNsfw] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { user } = useAuth();
+  const { user, subscribed } = useAuth();
   const { toast } = useToast();
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -31,6 +32,15 @@ const CreatePost = ({ onPostCreated }: { onPostCreated?: () => void }) => {
       toast({
         title: "Error",
         description: "You must be logged in to create a post.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!subscribed) {
+      toast({
+        title: "Subscription Required",
+        description: "You need an active subscription to create posts.",
         variant: "destructive",
       });
       return;
@@ -123,56 +133,70 @@ const CreatePost = ({ onPostCreated }: { onPostCreated?: () => void }) => {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="content" className="text-white">Content</Label>
-            <Textarea
-              id="content"
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="What's on your mind?"
-              className="bg-black border-gold/30 text-white focus:border-gold min-h-[100px]"
-              rows={4}
-            />
+        {!subscribed ? (
+          <div className="text-center py-8">
+            <p className="text-white/60 mb-4">
+              You need an active subscription to create posts and interact with the community.
+            </p>
+            <Button 
+              onClick={() => window.location.href = '/membership'}
+              className="bg-gold hover:bg-gold-light text-black font-semibold"
+            >
+              Subscribe to Echelon Texas
+            </Button>
           </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="image-upload" className="text-white">Image (Optional)</Label>
-            <div className="flex items-center space-x-2">
-              <Input
-                id="image-upload"
-                type="file"
-                accept="image/*"
-                onChange={handleImageChange}
-                className="bg-black border-gold/30 text-white focus:border-gold file:bg-gold file:text-black file:border-0 file:rounded file:px-3 file:py-1 file:mr-3"
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="content" className="text-white">Content</Label>
+              <Textarea
+                id="content"
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder="What's on your mind?"
+                className="bg-black border-gold/30 text-white focus:border-gold min-h-[100px]"
+                rows={4}
               />
-              <Upload className="text-gold h-4 w-4" />
             </div>
-            {image && (
-              <p className="text-white/60 text-sm">Selected: {image.name}</p>
-            )}
-          </div>
 
-          <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="nsfw" 
-              checked={isNsfw}
-              onCheckedChange={(checked) => setIsNsfw(checked === true)}
-              className="border-gold/30 data-[state=checked]:bg-gold data-[state=checked]:text-black"
-            />
-            <Label htmlFor="nsfw" className="text-white text-sm">
-              Mark as NSFW (Not Safe For Work)
-            </Label>
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="image-upload" className="text-white">Image (Optional)</Label>
+              <div className="flex items-center space-x-2">
+                <Input
+                  id="image-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="bg-black border-gold/30 text-white focus:border-gold file:bg-gold file:text-black file:border-0 file:rounded file:px-3 file:py-1 file:mr-3"
+                />
+                <Upload className="text-gold h-4 w-4" />
+              </div>
+              {image && (
+                <p className="text-white/60 text-sm">Selected: {image.name}</p>
+              )}
+            </div>
 
-          <Button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-gold hover:bg-gold-light text-black font-semibold disabled:opacity-50"
-          >
-            {loading ? "Creating Post..." : "Create Post"}
-          </Button>
-        </form>
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="nsfw" 
+                checked={isNsfw}
+                onCheckedChange={(checked) => setIsNsfw(checked === true)}
+                className="border-gold/30 data-[state=checked]:bg-gold data-[state=checked]:text-black"
+              />
+              <Label htmlFor="nsfw" className="text-white text-sm">
+                Mark as NSFW (Not Safe For Work)
+              </Label>
+            </div>
+
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-gold hover:bg-gold-light text-black font-semibold disabled:opacity-50"
+            >
+              {loading ? "Creating Post..." : "Create Post"}
+            </Button>
+          </form>
+        )}
       </CardContent>
     </Card>
   );

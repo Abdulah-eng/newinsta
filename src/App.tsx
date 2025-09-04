@@ -15,6 +15,7 @@ import MemberPortal from "./pages/portal/MemberPortal";
 import Feed from "./pages/portal/Feed";
 import Profile from "./pages/portal/Profile";
 import Documents from "./pages/portal/Documents";
+import CreatePost from "./pages/portal/CreatePostPage";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
@@ -53,6 +54,7 @@ const App = () => (
                 </ProtectedRoute>
               }>
                 <Route index element={<Feed />} />
+                <Route path="create" element={<CreatePost />} />
                 <Route path="profile" element={<Profile />} />
                 <Route path="documents" element={<Documents />} />
               </Route>

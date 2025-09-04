@@ -6,8 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
-import { Heart, MessageCircle, Share2, AlertTriangle } from "lucide-react";
+import { Heart, Share2, AlertTriangle, RefreshCw } from "lucide-react";
 import CreatePost from "./CreatePost";
+import CommentSection from "@/components/CommentSection";
 
 interface Post {
   id: string;
@@ -27,7 +28,7 @@ const Feed = () => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNsfw, setShowNsfw] = useState(false);
-  const { user } = useAuth();
+  const { user, subscribed } = useAuth();
   const { toast } = useToast();
 
   const fetchPosts = async () => {
@@ -59,6 +60,48 @@ const Feed = () => {
 
   useEffect(() => {
     fetchPosts();
+
+    // Set up real-time subscription for posts
+    const channel = supabase
+      .channel('posts-feed')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'posts'
+        },
+        () => {
+          fetchPosts(); // Refetch when new post is added
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'posts'
+        },
+        () => {
+          fetchPosts(); // Refetch when post is updated
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'posts'
+        },
+        () => {
+          fetchPosts(); // Refetch when post is deleted
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const formatDate = (dateString: string) => {
@@ -96,13 +139,24 @@ const Feed = () => {
       {/* NSFW Filter Toggle */}
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-serif text-gold">Community Feed</h2>
-        <Button
-          variant="outline"
-          onClick={() => setShowNsfw(!showNsfw)}
-          className="border-gold/30 text-gold hover:bg-gold hover:text-black"
-        >
-          {showNsfw ? "Hide NSFW" : "Show NSFW"}
-        </Button>
+        <div className="flex items-center space-x-3">
+          <Button
+            onClick={fetchPosts}
+            variant="outline"
+            size="sm"
+            className="border-gold/30 text-gold hover:bg-gold hover:text-black"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setShowNsfw(!showNsfw)}
+            className="border-gold/30 text-gold hover:bg-gold hover:text-black"
+          >
+            {showNsfw ? "Hide NSFW" : "Show NSFW"}
+          </Button>
+        </div>
       </div>
 
       {/* Posts */}
@@ -160,19 +214,28 @@ const Feed = () => {
                   </div>
                 )}
 
-                <div className="flex items-center space-x-6 pt-4 border-t border-gold/20">
-                  <Button variant="ghost" size="sm" className="text-white/60 hover:text-gold">
-                    <Heart className="h-4 w-4 mr-2" />
-                    Like
-                  </Button>
-                  <Button variant="ghost" size="sm" className="text-white/60 hover:text-gold">
-                    <MessageCircle className="h-4 w-4 mr-2" />
-                    Comment
-                  </Button>
-                  <Button variant="ghost" size="sm" className="text-white/60 hover:text-gold">
-                    <Share2 className="h-4 w-4 mr-2" />
-                    Share
-                  </Button>
+                <div className="space-y-4 pt-4 border-t border-gold/20">
+                  <div className="flex items-center space-x-6">
+                    <Button variant="ghost" size="sm" className="text-white/60 hover:text-gold">
+                      <Heart className="h-4 w-4 mr-2" />
+                      Like
+                    </Button>
+                    <Button variant="ghost" size="sm" className="text-white/60 hover:text-gold">
+                      <Share2 className="h-4 w-4 mr-2" />
+                      Share
+                    </Button>
+                  </div>
+                  
+                  {/* Comment Section */}
+                  {subscribed && (
+                    <CommentSection postId={post.id} />
+                  )}
+                  
+                  {!subscribed && (
+                    <div className="text-white/50 text-sm text-center py-2">
+                      <p>Subscribe to interact with posts and comments</p>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

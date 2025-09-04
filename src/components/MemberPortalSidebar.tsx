@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { User, Home, FileText, Settings, Shield, LogOut } from "lucide-react";
+import { User, Home, FileText, Settings, Shield, LogOut, Plus } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -15,6 +15,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const memberItems = [
   { title: "Feed", url: "/portal", icon: Home },
+  { title: "Create Post", url: "/portal/create", icon: Plus },
   { title: "My Profile", url: "/portal/profile", icon: User },
   { title: "Documents", url: "/portal/documents", icon: FileText },
   { title: "Settings", url: "/portal/settings", icon: Settings },
