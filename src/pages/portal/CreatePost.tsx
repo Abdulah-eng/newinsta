@@ -133,13 +133,13 @@ const CreatePost = ({ onPostCreated }: { onPostCreated?: () => void }) => {
         </CardDescription>
       </CardHeader>
       <CardContent>
+        <div className="mb-4 p-2 bg-gray-800 rounded text-xs">
+          DEBUG: subscribed={String(subscribed)}, user={user ? 'yes' : 'no'}
+        </div>
         {!subscribed ? (
           <div className="text-center py-8">
             <p className="text-white/60 mb-4">
               You need an active subscription to create posts and interact with the community.
-            </p>
-            <p className="text-white/40 text-sm mb-4">
-              Debug: subscribed = {subscribed ? 'true' : 'false'}, user = {user ? 'logged in' : 'not logged in'}
             </p>
             <Button 
               onClick={() => window.location.href = '/membership'}
