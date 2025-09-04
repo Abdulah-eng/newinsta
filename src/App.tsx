@@ -16,6 +16,7 @@ import Feed from "./pages/portal/Feed";
 import Profile from "./pages/portal/Profile";
 import Documents from "./pages/portal/Documents";
 import CreatePost from "./pages/portal/CreatePostPage";
+import TestData from "./pages/portal/TestData";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
@@ -57,6 +58,7 @@ const App = () => (
                 <Route path="create" element={<CreatePost />} />
                 <Route path="profile" element={<Profile />} />
                 <Route path="documents" element={<Documents />} />
+                <Route path="test" element={<TestData />} />
               </Route>
               
               {/* Admin routes */}
