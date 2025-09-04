@@ -6,11 +6,13 @@ import { Label } from "@/components/ui/label";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
-const Login = () => {
+const SignUp = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
-  const { signIn, user } = useAuth();
+  const { signUp, user } = useAuth();
   const navigate = useNavigate();
 
   // Redirect if already logged in
@@ -19,15 +21,26 @@ const Login = () => {
     return null;
   }
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (password !== confirmPassword) {
+      alert("Passwords don't match!");
+      return;
+    }
+
+    if (password.length < 6) {
+      alert("Password must be at least 6 characters long!");
+      return;
+    }
+
     setLoading(true);
     
     try {
-      await signIn(email, password);
-      navigate("/portal");
+      await signUp(email, password, fullName);
+      // User will be redirected after email verification
     } catch (error) {
-      console.error("Login failed:", error);
+      console.error("Sign up failed:", error);
     } finally {
       setLoading(false);
     }
@@ -37,13 +50,25 @@ const Login = () => {
     <div className="min-h-screen bg-black flex items-center justify-center p-6">
       <Card className="w-full max-w-md bg-charcoal border-gold/20">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-serif text-gold">Welcome Back</CardTitle>
+          <CardTitle className="text-2xl font-serif text-gold">Join Echelon Texas</CardTitle>
           <CardDescription className="text-white/70">
-            Sign in to access your Echelon Texas membership
+            Create your exclusive membership account
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={handleSignUp} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="fullName" className="text-white">Full Name</Label>
+              <Input
+                id="fullName"
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                className="bg-black border-gold/30 text-white focus:border-gold"
+                placeholder="Your full name"
+                required
+              />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="email" className="text-white">Email</Label>
               <Input
@@ -68,26 +93,32 @@ const Login = () => {
                 required
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword" className="text-white">Confirm Password</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="bg-black border-gold/30 text-white focus:border-gold"
+                placeholder="••••••••"
+                required
+              />
+            </div>
             <Button 
               type="submit" 
               disabled={loading}
               className="w-full bg-gold hover:bg-gold-light text-black font-semibold disabled:opacity-50"
             >
-              {loading ? "Signing in..." : "Sign In"}
+              {loading ? "Creating Account..." : "Create Account"}
             </Button>
           </form>
           
-          <div className="mt-6 text-center space-y-2">
-            <Link 
-              to="/forgot-password" 
-              className="text-gold hover:text-gold-light text-sm"
-            >
-              Forgot your password?
-            </Link>
+          <div className="mt-6 text-center">
             <div className="text-white/60 text-sm">
-              Don't have an account?{" "}
-              <Link to="/signup" className="text-gold hover:text-gold-light">
-                Sign up here
+              Already have an account?{" "}
+              <Link to="/login" className="text-gold hover:text-gold-light">
+                Sign in here
               </Link>
             </div>
           </div>
@@ -97,4 +128,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default SignUp;

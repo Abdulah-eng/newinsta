@@ -1,187 +1,183 @@
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Heart, MessageCircle, Share, Plus, Eye, EyeOff } from "lucide-react";
-import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
+import { Heart, MessageCircle, Share2, AlertTriangle } from "lucide-react";
+import CreatePost from "./CreatePost";
+
+interface Post {
+  id: string;
+  author_id: string;
+  content: string;
+  image_url?: string;
+  is_nsfw: boolean;
+  created_at: string;
+  profiles: {
+    full_name: string;
+    avatar_url?: string;
+    membership_tier?: string;
+  };
+}
 
 const Feed = () => {
-  const [posts] = useState([
-    {
-      id: 1,
-      author: {
-        name: "Alexandra Stone",
-        handle: "@alexandra",
-        avatar: "/api/placeholder/40/40"
-      },
-      content: "Excited about tonight's exclusive networking event! The connections here are incredible. 🥂",
-      image: "/api/placeholder/600/400",
-      isNSFW: false,
-      likes: 24,
-      comments: 8,
-      timestamp: "2h ago"
-    },
-    {
-      id: 2,
-      author: {
-        name: "Marcus Chen",
-        handle: "@marcus",
-        avatar: "/api/placeholder/40/40"
-      },
-      content: "Private content for verified members only...",
-      image: "/api/placeholder/600/400",
-      isNSFW: true,
-      likes: 45,
-      comments: 12,
-      timestamp: "4h ago"
-    },
-    {
-      id: 3,
-      author: {
-        name: "Isabella Rodriguez",
-        handle: "@isabella",
-        avatar: "/api/placeholder/40/40"
-      },
-      content: "The ambiance at our upcoming club location is going to be absolutely stunning. Can't wait to share more details with everyone! ✨",
-      likes: 67,
-      comments: 15,
-      timestamp: "6h ago"
-    }
-  ]);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showNsfw, setShowNsfw] = useState(false);
+  const { user } = useAuth();
+  const { toast } = useToast();
 
-  const [revealedPosts, setRevealedPosts] = useState<Set<number>>(new Set());
+  const fetchPosts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('posts')
+        .select(`
+          *,
+          profiles!posts_author_id_fkey (
+            full_name,
+            avatar_url,
+            membership_tier
+          )
+        `)
+        .order('created_at', { ascending: false });
 
-  const toggleReveal = (postId: number) => {
-    const newRevealed = new Set(revealedPosts);
-    if (newRevealed.has(postId)) {
-      newRevealed.delete(postId);
-    } else {
-      newRevealed.add(postId);
+      if (error) throw error;
+      setPosts(data || []);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to load posts.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
-    setRevealedPosts(newRevealed);
   };
 
-  const handleCreatePost = () => {
-    // TODO: Implement post creation
-    alert("Post creation coming with backend integration!");
+  useEffect(() => {
+    fetchPosts();
+  }, []);
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString() + ' at ' + date.toLocaleTimeString([], { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
   };
+
+  const getMembershipBadgeColor = (tier?: string) => {
+    switch (tier) {
+      case 'elite': return 'bg-gold text-black';
+      case 'premium': return 'bg-gradient-to-r from-purple-400 to-purple-600 text-white';
+      case 'basic': return 'bg-gray-500 text-white';
+      default: return 'bg-gray-500 text-white';
+    }
+  };
+
+  const filteredPosts = posts.filter(post => showNsfw || !post.is_nsfw);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-gold text-xl font-serif">Loading posts...</div>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-2xl mx-auto p-6 space-y-6">
-      {/* Create Post */}
-      <Card className="bg-charcoal border-gold/20">
-        <CardContent className="p-4">
-          <Button 
-            onClick={handleCreatePost}
-            className="w-full bg-gold/20 hover:bg-gold/30 text-gold border border-gold/30"
-            variant="outline"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Share with the community
-          </Button>
-        </CardContent>
-      </Card>
+    <div className="max-w-2xl mx-auto space-y-6">
+      {/* Create Post Section */}
+      <CreatePost onPostCreated={fetchPosts} />
 
-      {/* Stories Placeholder */}
-      <Card className="bg-charcoal border-gold/20">
-        <CardHeader>
-          <h3 className="text-lg font-semibold text-gold">Member Stories</h3>
-        </CardHeader>
-        <CardContent>
-          <div className="flex space-x-4 overflow-x-auto pb-2">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="flex-shrink-0">
-                <div className="w-16 h-16 rounded-full bg-gold/20 border-2 border-gold/50 flex items-center justify-center">
-                  <span className="text-gold text-xs">Story {i}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-          <p className="text-white/60 text-sm mt-2">Stories feature coming soon!</p>
-        </CardContent>
-      </Card>
+      {/* NSFW Filter Toggle */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-serif text-gold">Community Feed</h2>
+        <Button
+          variant="outline"
+          onClick={() => setShowNsfw(!showNsfw)}
+          className="border-gold/30 text-gold hover:bg-gold hover:text-black"
+        >
+          {showNsfw ? "Hide NSFW" : "Show NSFW"}
+        </Button>
+      </div>
 
-      {/* Feed Posts */}
+      {/* Posts */}
       <div className="space-y-6">
-        {posts.map((post) => (
-          <Card key={post.id} className="bg-charcoal border-gold/20">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <Avatar>
-                    <AvatarImage src={post.author.avatar} />
-                    <AvatarFallback className="bg-gold/20 text-gold">
-                      {post.author.name.split(' ').map(n => n[0]).join('')}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-semibold text-white">{post.author.name}</p>
-                    <p className="text-sm text-white/60">{post.author.handle} • {post.timestamp}</p>
-                  </div>
-                </div>
-              </div>
-            </CardHeader>
-            
-            <CardContent className="space-y-4">
-              <p className="text-white/90">{post.content}</p>
-              
-              {post.image && (
-                <div className="relative">
-                  {post.isNSFW && !revealedPosts.has(post.id) ? (
-                    <div className="aspect-video bg-black/50 border border-gold/30 rounded-lg flex flex-col items-center justify-center space-y-3">
-                      <EyeOff className="w-8 h-8 text-white/60" />
-                      <p className="text-white/80 font-medium">Age-Restricted Content</p>
-                      <p className="text-white/60 text-sm text-center px-4">
-                        This content is marked as NSFW. You must be 18+ to view.
-                      </p>
-                      <Button
-                        onClick={() => toggleReveal(post.id)}
-                        variant="outline"
-                        className="border-gold/50 text-gold hover:bg-gold/20"
-                      >
-                        <Eye className="mr-2 h-4 w-4" />
-                        Tap to Reveal
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="relative">
-                      <img 
-                        src={post.image} 
-                        alt="Post content" 
-                        className="w-full rounded-lg"
-                      />
-                      {post.isNSFW && (
-                        <Button
-                          onClick={() => toggleReveal(post.id)}
-                          variant="outline"
-                          size="sm"
-                          className="absolute top-2 right-2 border-gold/50 text-gold hover:bg-gold/20"
-                        >
-                          <EyeOff className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-              
-              <div className="flex items-center justify-between pt-2">
-                <div className="flex items-center space-x-6">
-                  <button className="flex items-center space-x-2 text-white/60 hover:text-gold transition-colors">
-                    <Heart className="w-5 h-5" />
-                    <span>{post.likes}</span>
-                  </button>
-                  <button className="flex items-center space-x-2 text-white/60 hover:text-gold transition-colors">
-                    <MessageCircle className="w-5 h-5" />
-                    <span>{post.comments}</span>
-                  </button>
-                  <button className="text-white/60 hover:text-gold transition-colors">
-                    <Share className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
+        {filteredPosts.length === 0 ? (
+          <Card className="bg-charcoal border-gold/20">
+            <CardContent className="p-8 text-center">
+              <p className="text-white/60">No posts yet. Be the first to share something!</p>
             </CardContent>
           </Card>
-        ))}
+        ) : (
+          filteredPosts.map((post) => (
+            <Card key={post.id} className="bg-charcoal border-gold/20">
+              <CardHeader>
+                <div className="flex items-start space-x-3">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={post.profiles?.avatar_url || ''} />
+                    <AvatarFallback className="bg-gold text-black">
+                      {post.profiles?.full_name?.charAt(0) || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center space-x-2">
+                      <p className="text-white font-medium">
+                        {post.profiles?.full_name || 'Anonymous'}
+                      </p>
+                      {post.profiles?.membership_tier && (
+                        <Badge className={getMembershipBadgeColor(post.profiles.membership_tier)}>
+                          {post.profiles.membership_tier.toUpperCase()}
+                        </Badge>
+                      )}
+                      {post.is_nsfw && (
+                        <Badge variant="destructive" className="flex items-center space-x-1">
+                          <AlertTriangle className="h-3 w-3" />
+                          <span>NSFW</span>
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-white/60 text-sm">
+                      {formatDate(post.created_at)}
+                    </p>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-white whitespace-pre-wrap mb-4">{post.content}</p>
+                
+                {post.image_url && (
+                  <div className="mb-4">
+                    <img 
+                      src={post.image_url} 
+                      alt="Post image" 
+                      className="rounded-lg max-w-full h-auto"
+                    />
+                  </div>
+                )}
+
+                <div className="flex items-center space-x-6 pt-4 border-t border-gold/20">
+                  <Button variant="ghost" size="sm" className="text-white/60 hover:text-gold">
+                    <Heart className="h-4 w-4 mr-2" />
+                    Like
+                  </Button>
+                  <Button variant="ghost" size="sm" className="text-white/60 hover:text-gold">
+                    <MessageCircle className="h-4 w-4 mr-2" />
+                    Comment
+                  </Button>
+                  <Button variant="ghost" size="sm" className="text-white/60 hover:text-gold">
+                    <Share2 className="h-4 w-4 mr-2" />
+                    Share
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
       </div>
     </div>
   );

@@ -11,6 +11,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { useAuth } from "@/contexts/AuthContext";
 
 const memberItems = [
   { title: "Feed", url: "/portal", icon: Home },
@@ -26,6 +27,7 @@ const adminItems = [
 export function MemberPortalSidebar() {
   const { state } = useSidebar();
   const location = useLocation();
+  const { profile, signOut } = useAuth();
   const currentPath = location.pathname;
   const collapsed = state === "collapsed";
 
@@ -39,12 +41,12 @@ export function MemberPortalSidebar() {
   const getNavClass = ({ isActive }: { isActive: boolean }) =>
     isActive ? "bg-gold/20 text-gold" : "text-white/80 hover:text-gold hover:bg-gold/10";
 
-  // TODO: Replace with actual auth check
-  const isAdmin = true; // Placeholder
-
-  const handleLogout = () => {
-    // TODO: Implement logout with Supabase
-    alert("Logout functionality coming with Supabase integration!");
+  const handleLogout = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
   };
 
   return (
@@ -74,7 +76,7 @@ export function MemberPortalSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {isAdmin && (
+        {profile?.is_admin && (
           <SidebarGroup>
             <SidebarGroupLabel className="text-gold/80 font-serif">
               Administration
