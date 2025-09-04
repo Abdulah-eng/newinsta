@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import echelonHall from "@/assets/echelon-hall.jpg";
-import echelonLogo from "@/assets/echelon-logo.png";
+import echelonLogo from "@/assets/echelon-logo-new.png";
 
 const Hero = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -52,7 +52,7 @@ const Hero = () => {
                 <img
                   src={slide.image}
                   alt={slide.alt}
-                  className="max-w-md h-auto opacity-90"
+                  className="max-w-xs h-auto opacity-90"
                 />
               )}
             </div>
