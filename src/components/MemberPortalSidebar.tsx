@@ -18,7 +18,7 @@ const memberItems = [
   { title: "Create Post", url: "/portal/create", icon: Plus },
   { title: "My Profile", url: "/portal/profile", icon: User },
   { title: "Documents", url: "/portal/documents", icon: FileText },
-  { title: "Test Environment", url: "/portal/test", icon: Settings },
+  { title: "Settings", url: "/portal/settings", icon: Settings },
 ];
 
 const adminItems = [

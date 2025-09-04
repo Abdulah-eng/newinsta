@@ -269,37 +269,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }
 
   useEffect(() => {
-    let mounted = true;
-    
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!mounted) return;
-      
       setSession(session)
       setUser(session?.user ?? null)
       
       if (session?.user) {
-        getProfile(session.user.id).then(profile => {
-          if (!mounted) return;
-          setProfile(profile);
-        });
+        getProfile(session.user.id).then(setProfile)
         // Check subscription status after setting user
         setTimeout(() => {
-          if (!mounted) return;
-          checkSubscription();
-        }, 100);
+          checkSubscription()
+        }, 100)
       }
       
-      setLoading(false);
+      setLoading(false)
     }).catch((error) => {
-      console.error('AuthContext: Error getting session:', error);
-      if (mounted) setLoading(false);
-    });
+      console.error('AuthContext: Error getting session:', error)
+      setLoading(false)
+    })
 
-    return () => { mounted = false; };
-  }, []);
-
-  useEffect(() => {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
@@ -319,6 +307,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setSubscriptionTier(null)
           setSubscriptionEnd(null)
         }
+        
+        setLoading(false)
       }
     )
 
