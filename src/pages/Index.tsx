@@ -4,11 +4,11 @@ import FAQ from "@/components/FAQ";
 
 const Index = () => {
   return (
-    <div className="min-h-screen bg-black">
+    <>
       <Hero />
       <Benefits />
       <FAQ />
-    </div>
+    </>
   );
 };
 
