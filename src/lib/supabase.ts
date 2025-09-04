@@ -3,11 +3,33 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables')
-}
+// Create a mock client if Supabase is not configured
+const createMockSupabase = () => ({
+  auth: {
+    getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+    getUser: () => Promise.resolve({ data: { user: null }, error: null }),
+    signUp: () => Promise.reject(new Error('Supabase not configured')),
+    signInWithPassword: () => Promise.reject(new Error('Supabase not configured')),
+    signOut: () => Promise.reject(new Error('Supabase not configured')),
+    onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+  },
+  from: () => ({
+    select: () => Promise.resolve({ data: [], error: null }),
+    insert: () => Promise.reject(new Error('Supabase not configured')),
+    update: () => Promise.reject(new Error('Supabase not configured')),
+    upsert: () => Promise.reject(new Error('Supabase not configured')),
+  }),
+  storage: {
+    from: () => ({
+      upload: () => Promise.reject(new Error('Supabase not configured')),
+      getPublicUrl: () => ({ data: { publicUrl: '' } }),
+    }),
+  },
+})
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = supabaseUrl && supabaseAnonKey 
+  ? createClient(supabaseUrl, supabaseAnonKey)
+  : createMockSupabase() as any
 
 export type Database = {
   public: {

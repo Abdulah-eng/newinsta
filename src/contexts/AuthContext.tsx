@@ -83,7 +83,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "Supabase authentication not configured yet.",
         variant: "destructive",
       })
       throw error
@@ -105,8 +105,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       })
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message,
+        title: "Error", 
+        description: error.message || "Supabase authentication not configured yet.",
         variant: "destructive",
       })
       throw error
