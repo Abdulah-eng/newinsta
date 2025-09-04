@@ -63,7 +63,7 @@ serve(async (req) => {
           price_data: {
             currency: "usd",
             product_data: { 
-              name: "Echelon Hall Premium Membership",
+              name: "Echelon TX Digital Membership",
               description: "Access to exclusive member features and content"
             },
             unit_amount: 2000, // $20.00 in cents
