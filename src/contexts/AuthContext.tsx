@@ -81,6 +81,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         options: {
           data: {
             full_name: fullName,
+            fullName: fullName, // Adding both variants to ensure compatibility
           }
         }
       })
