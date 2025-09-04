@@ -108,7 +108,7 @@ const SignUp = () => {
             <Button 
               type="submit" 
               disabled={loading}
-              className="w-full bg-gold hover:bg-gold-light text-black font-semibold disabled:opacity-50"
+              className="w-full bg-gold hover:bg-gold-light text-black font-bold py-3 text-lg disabled:opacity-50 shadow-lg"
             >
               {loading ? "Creating Account..." : "Create Account"}
             </Button>

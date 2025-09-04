@@ -170,6 +170,16 @@ const Profile = () => {
                     : "Join our premium membership to unlock all features."
                   }
                 </p>
+                {!subscribed && (
+                  <div className="mt-4">
+                    <Button 
+                      onClick={() => window.location.href = '/membership'}
+                      className="bg-gold hover:bg-gold-light text-black font-semibold"
+                    >
+                      Subscribe for $20/month
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           </div>

@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { User, Home, FileText, Settings, Shield, LogOut, Plus } from "lucide-react";
+import { User, Home, FileText, Settings, Shield, LogOut, Plus, Crown } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -28,7 +28,7 @@ const adminItems = [
 export function MemberPortalSidebar() {
   const { state } = useSidebar();
   const location = useLocation();
-  const { profile, signOut } = useAuth();
+  const { profile, signOut, subscribed } = useAuth();
   const currentPath = location.pathname;
   const collapsed = state === "collapsed";
 
@@ -102,7 +102,16 @@ export function MemberPortalSidebar() {
           </SidebarGroup>
         )}
 
-        <div className="mt-auto p-4">
+        <div className="mt-auto p-4 space-y-3">
+          {!subscribed && (
+            <SidebarMenuButton
+              onClick={() => window.location.href = '/membership'}
+              className="w-full text-gold hover:text-gold-light hover:bg-gold/10 border border-gold/30"
+            >
+              <Crown className="mr-2 h-4 w-4" />
+              {!collapsed && <span>Upgrade to Premium</span>}
+            </SidebarMenuButton>
+          )}
           <SidebarMenuButton
             onClick={handleLogout}
             className="w-full text-white/80 hover:text-gold hover:bg-gold/10"
