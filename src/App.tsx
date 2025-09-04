@@ -49,7 +49,7 @@ const App = () => (
               
               {/* Member portal routes */}
               <Route path="/portal" element={
-                <ProtectedRoute>
+                <ProtectedRoute requireSubscription>
                   <MemberPortal />
                 </ProtectedRoute>
               }>
