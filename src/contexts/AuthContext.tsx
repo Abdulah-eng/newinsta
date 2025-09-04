@@ -269,30 +269,43 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }
 
   useEffect(() => {
+    console.log('AuthContext: useEffect started')
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('AuthContext: Got session', !!session)
       setSession(session)
       setUser(session?.user ?? null)
       
       if (session?.user) {
-        getProfile(session.user.id).then(setProfile)
+        console.log('AuthContext: User found, getting profile')
+        getProfile(session.user.id).then((profile) => {
+          console.log('AuthContext: Profile loaded', !!profile)
+          setProfile(profile)
+        })
         // Check subscription status after setting user
         setTimeout(() => {
+          console.log('AuthContext: Checking subscription')
           checkSubscription()
         }, 100)
       }
       
+      console.log('AuthContext: Setting loading to false')
+      setLoading(false)
+    }).catch((error) => {
+      console.error('AuthContext: Error getting session:', error)
       setLoading(false)
     })
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('AuthContext: Auth state changed', event, !!session)
         setSession(session)
         setUser(session?.user ?? null)
         
         if (session?.user) {
           const profile = await getProfile(session.user.id)
+          console.log('AuthContext: Profile from auth change', !!profile)
           setProfile(profile)
           // Check subscription status when user logs in
           setTimeout(() => {
@@ -305,6 +318,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setSubscriptionEnd(null)
         }
         
+        console.log('AuthContext: Setting loading to false from auth change')
         setLoading(false)
       }
     )
