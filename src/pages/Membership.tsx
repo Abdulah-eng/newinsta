@@ -161,7 +161,14 @@ const Membership = () => {
               )}
 
               <p className="text-xs text-white/50 text-center">
-                By joining, you agree to our Terms of Service and Privacy Policy
+                By joining, you agree to our{" "}
+                <Link to="/terms" className="text-gold hover:text-gold-light underline">
+                  Terms of Service
+                </Link>
+                {" "}and{" "}
+                <Link to="/privacy" className="text-gold hover:text-gold-light underline">
+                  Privacy Policy
+                </Link>
               </p>
             </CardContent>
           </Card>

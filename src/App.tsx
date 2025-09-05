@@ -19,6 +19,8 @@ import CreatePost from "./pages/portal/CreatePostPage";
 import TestData from "./pages/portal/TestData";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
+import TermsOfService from "./pages/TermsOfService";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 
 const queryClient = new QueryClient();
 
@@ -47,6 +49,18 @@ const App = () => (
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<SignUp />} />
               <Route path="/payment-success" element={<PaymentSuccess />} />
+              <Route path="/terms" element={
+                <>
+                  <Header />
+                  <TermsOfService />
+                </>
+              } />
+              <Route path="/privacy" element={
+                <>
+                  <Header />
+                  <PrivacyPolicy />
+                </>
+              } />
               
               {/* Member portal routes */}
               <Route path="/portal" element={
