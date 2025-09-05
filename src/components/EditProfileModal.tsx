@@ -27,11 +27,9 @@ const EditProfileModal = ({ children, onProfileUpdated }: EditProfileModalProps)
 
   useEffect(() => {
     if (profile && open) {
-      console.log('EditProfileModal: Loading profile data', profile);
       setFullName(profile.full_name || "");
       setBio(profile.bio || "");
       setAvatarPreview(profile.avatar_url || "");
-      console.log('EditProfileModal: Bio value set to:', profile.bio);
     }
   }, [profile, open]);
 
