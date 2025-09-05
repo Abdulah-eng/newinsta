@@ -12,6 +12,7 @@ const SignUp = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const { signUp, user } = useAuth();
   const navigate = useNavigate();
 
@@ -26,15 +27,16 @@ const SignUp = () => {
     e.preventDefault();
     
     if (password !== confirmPassword) {
-      alert("Passwords don't match!");
+      setError("Passwords don't match!");
       return;
     }
 
     if (password.length < 6) {
-      alert("Password must be at least 6 characters long!");
+      setError("Password must be at least 6 characters long!");
       return;
     }
 
+    setError("");
     setLoading(true);
     
     try {
@@ -106,8 +108,11 @@ const SignUp = () => {
                 required
               />
             </div>
+            {error && (
+              <div className="text-red-400 text-sm">{error}</div>
+            )}
             <Button 
-              type="submit" 
+              type="submit"
               disabled={loading}
               className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-3 text-lg disabled:opacity-50 shadow-lg"
             >

@@ -56,12 +56,10 @@ const Documents = () => {
 
   const handleDownload = (docTitle: string) => {
     // TODO: Implement document download with Supabase Storage
-    alert(`Download functionality for "${docTitle}" coming with backend integration!`);
   };
 
   const handleView = (docTitle: string) => {
     // TODO: Implement document viewing
-    alert(`Document viewer for "${docTitle}" coming soon!`);
   };
 
   return (

@@ -82,13 +82,11 @@ const Admin = () => {
   ];
 
   const handleReportAction = (reportId: number, action: 'approve' | 'reject') => {
-    // TODO: Implement with Supabase
-    alert(`Report ${reportId} ${action}ed! Backend integration coming soon.`);
+    // TODO: Implement with Supabase - removed intrusive alert
   };
 
   const handleUserAction = (userId: number, action: 'ban' | 'verify') => {
-    // TODO: Implement with Supabase
-    alert(`User ${userId} ${action}ed! Backend integration coming soon.`);
+    // TODO: Implement with Supabase - removed intrusive alert
   };
 
   return (

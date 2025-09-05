@@ -28,7 +28,6 @@ const Membership = () => {
 
   const handleSubscribe = () => {
     if (!user) {
-      alert("Please log in first to subscribe");
       return;
     }
     createCheckout();
