@@ -133,9 +133,6 @@ const CreatePost = ({ onPostCreated }: { onPostCreated?: () => void }) => {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="mb-4 p-2 bg-gray-800 rounded text-xs">
-          DEBUG: subscribed={String(subscribed)}, user={user ? 'yes' : 'no'}
-        </div>
         {!subscribed ? (
           <div className="text-center py-8">
             <p className="text-white/60 mb-4">

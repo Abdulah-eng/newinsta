@@ -28,7 +28,7 @@ const EditProfileModal = ({ children, onProfileUpdated }: EditProfileModalProps)
   useEffect(() => {
     if (profile && open) {
       setFullName(profile.full_name || "");
-      setBio(""); // We'll add bio field to profile later if needed
+      setBio(profile.bio || "");
       setAvatarPreview(profile.avatar_url || "");
     }
   }, [profile, open]);
@@ -87,6 +87,7 @@ const EditProfileModal = ({ children, onProfileUpdated }: EditProfileModalProps)
       // Update profile
       await updateProfile({
         full_name: fullName.trim(),
+        bio: bio.trim(),
         avatar_url: avatarUrl,
       });
 
@@ -171,18 +172,18 @@ const EditProfileModal = ({ children, onProfileUpdated }: EditProfileModalProps)
             />
           </div>
 
-          {/* Bio (placeholder for future enhancement) */}
+          {/* Bio */}
           <div className="space-y-2">
-            <Label htmlFor="bio" className="text-white">Bio (Coming Soon)</Label>
+            <Label htmlFor="bio" className="text-white">Bio</Label>
             <Textarea
               id="bio"
               value={bio}
               onChange={(e) => setBio(e.target.value)}
               placeholder="Tell us about yourself..."
               className="bg-black border-gold/30 text-white focus:border-gold min-h-[80px]"
-              disabled
+              maxLength={500}
             />
-            <p className="text-white/50 text-xs">Bio functionality will be added in a future update.</p>
+            <p className="text-white/50 text-xs">{bio.length}/500 characters</p>
           </div>
 
           {/* Actions */}

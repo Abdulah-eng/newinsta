@@ -7,6 +7,7 @@ interface Profile {
   id: string
   email: string
   full_name: string | null
+  bio: string | null
   avatar_url: string | null
   membership_tier: 'basic' | 'premium' | 'elite' | null
   is_admin: boolean
