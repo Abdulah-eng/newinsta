@@ -1,5 +1,6 @@
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
+import LoadingSpinner from '@/components/LoadingSpinner'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -11,11 +12,7 @@ const ProtectedRoute = ({ children, requireAdmin = false, requireSubscription = 
   const { user, profile, loading, subscribed } = useAuth()
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-gold text-xl font-serif">Loading...</div>
-      </div>
-    )
+    return <LoadingSpinner message="Checking access..." />
   }
 
   if (!user) {

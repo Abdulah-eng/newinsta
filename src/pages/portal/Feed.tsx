@@ -37,7 +37,7 @@ const Feed = () => {
         .from('posts')
         .select(`
           *,
-          profiles!posts_author_id_fkey (
+          profiles (
             full_name,
             avatar_url,
             membership_tier
@@ -48,6 +48,7 @@ const Feed = () => {
       if (error) throw error;
       setPosts(data || []);
     } catch (error: any) {
+      console.error('Error fetching posts:', error);
       toast({
         title: "Error",
         description: "Failed to load posts.",

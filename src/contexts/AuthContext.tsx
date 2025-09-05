@@ -60,7 +60,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .single()
+        .maybeSingle()
 
       if (error) {
         console.error('Error fetching profile:', error)
@@ -76,10 +76,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signUp = async (email: string, password: string, fullName: string) => {
     try {
+      const redirectUrl = `${window.location.origin}/`;
+      
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
+          emailRedirectTo: redirectUrl,
           data: {
             full_name: fullName,
             fullName: fullName, // Adding both variants to ensure compatibility
@@ -128,24 +131,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async () => {
     try {
-      console.log('Attempting to sign out...')
       const { error } = await supabase.auth.signOut()
-      if (error) {
-        console.error('Supabase signOut error:', error)
-        throw error
-      }
+      if (error) throw error
 
-      console.log('Sign out successful, clearing state...')
       setUser(null)
       setProfile(null)
       setSession(null)
+      setSubscribed(false)
+      setSubscriptionTier(null)
+      setSubscriptionEnd(null)
 
       toast({
         title: "Signed out",
         description: "You've been signed out successfully.",
       })
     } catch (error: any) {
-      console.error('SignOut error:', error)
       toast({
         title: "Error",
         description: error.message,
@@ -156,27 +156,36 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }
 
   const checkSubscription = async () => {
-    if (!session?.access_token) return
+    if (!session?.access_token) {
+      setSubscribed(false);
+      setSubscriptionTier(null);
+      setSubscriptionEnd(null);
+      return;
+    }
 
     try {
-      setSubscriptionLoading(true)
+      setSubscriptionLoading(true);
       const { data, error } = await supabase.functions.invoke('check-subscription', {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
-      })
+      });
 
-      if (error) throw error
+      if (error) throw error;
 
-      setSubscribed(data.subscribed || false)
-      setSubscriptionTier(data.subscription_tier || null)
-      setSubscriptionEnd(data.subscription_end || null)
+      setSubscribed(data.subscribed || false);
+      setSubscriptionTier(data.subscription_tier || null);
+      setSubscriptionEnd(data.subscription_end || null);
     } catch (error: any) {
-      console.error('Error checking subscription:', error)
+      console.error('Error checking subscription:', error);
+      // Set defaults on error
+      setSubscribed(false);
+      setSubscriptionTier(null);
+      setSubscriptionEnd(null);
     } finally {
-      setSubscriptionLoading(false)
+      setSubscriptionLoading(false);
     }
-  }
+  };
 
   const createCheckout = async () => {
     if (!session?.access_token) {
