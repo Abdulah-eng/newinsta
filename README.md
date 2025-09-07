@@ -1,73 +1,144 @@
-# Welcome to your Lovable project
+# Echelon Texas Portal
 
-## Project info
+A premium member portal built with React, Vite, TypeScript, and Supabase. Features subscription management, exclusive content, and member community.
 
-**URL**: https://lovable.dev/projects/adfd5d1e-8e27-4cd7-8c5c-ced83054e2a6
+## 🚀 Quick Start
 
-## How can I edit this code?
+### Prerequisites
+- Node.js 18+ and npm
+- Supabase account
+- Stripe account (for payments)
 
-There are several ways of editing your application.
+### Local Development
 
-**Use Lovable**
+1. **Clone and install dependencies**
+   ```bash
+   git clone <repo-url>
+   cd echelon-portal
+   npm install
+   ```
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/adfd5d1e-8e27-4cd7-8c5c-ced83054e2a6) and start prompting.
+2. **Environment setup**
+   ```bash
+   cp .env.example .env
+   # Fill in your environment variables (see .env.example)
+   ```
 
-Changes made via Lovable will be committed automatically to this repo.
+3. **Start development server**
+   ```bash
+   npm run dev
+   ```
+   Open http://localhost:8080
 
-**Use your preferred IDE**
+4. **Build for production**
+   ```bash
+   npm run build
+   npm run preview  # Preview production build locally
+   ```
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## 🔧 Configuration
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### Supabase Setup
 
-Follow these steps:
+1. Create a new Supabase project at [supabase.com](https://supabase.com)
+2. Go to Settings > API to get your keys
+3. Run the database migration:
+   ```sql
+   -- Copy and run the contents of schema.sql in Supabase SQL Editor
+   ```
+4. Configure authentication providers in Supabase Dashboard > Authentication > Providers
+5. Set up Row Level Security policies (included in schema.sql)
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### Stripe Setup
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+1. Create a Stripe account at [stripe.com](https://stripe.com)
+2. Get your API keys from Dashboard > Developers > API keys
+3. Create subscription products and prices in Dashboard > Products
+4. Configure webhook endpoints for production deployments
+5. Test with Stripe test mode before going live
 
-# Step 3: Install the necessary dependencies.
-npm i
+### Environment Variables
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+Required variables (see `.env.example` for details):
+- `VITE_SUPABASE_URL` - Your Supabase project URL
+- `VITE_SUPABASE_ANON_KEY` - Supabase anonymous/public key
+- Stripe keys for payment processing
+- Additional configuration for production deployment
+
+## 🏗️ Tech Stack
+
+- **Frontend**: React 18, TypeScript, Vite
+- **Styling**: Tailwind CSS, shadcn/ui components
+- **Backend**: Supabase (PostgreSQL, Auth, Storage, Edge Functions)
+- **Payments**: Stripe subscriptions and one-time payments
+- **Deployment**: Vercel (recommended), Netlify, or any React hosting
+
+## 📁 Project Structure
+
+```
+src/
+├── components/          # Reusable UI components
+│   ├── ui/             # shadcn/ui base components
+│   └── ...             # Custom components
+├── contexts/           # React contexts (Auth, etc.)
+├── hooks/              # Custom React hooks
+├── integrations/       # External service integrations
+│   └── supabase/       # Supabase client and types
+├── lib/                # Utility functions
+├── pages/              # Page components
+│   └── portal/         # Member portal pages
+└── assets/             # Static assets
+
+supabase/
+├── functions/          # Edge functions
+├── config.toml         # Supabase configuration
+└── migrations/         # Database migrations
 ```
 
-**Edit a file directly in GitHub**
+## 🚀 Deployment
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Vercel (Recommended)
 
-**Use GitHub Codespaces**
+1. Connect your GitHub repo to Vercel
+2. Set environment variables in Vercel dashboard
+3. Deploy automatically on git push
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### Custom Domain Setup
 
-## What technologies are used for this project?
+1. Add your domain in Vercel dashboard
+2. Configure DNS records as instructed
+3. Update `VITE_SITE_URL` environment variable
+4. Update Stripe webhook URLs and redirect URLs
 
-This project is built with:
+### Production Checklist
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+- [ ] Set all environment variables
+- [ ] Configure Supabase production settings
+- [ ] Set up Stripe webhook endpoints
+- [ ] Test payment flows in Stripe test mode
+- [ ] Switch to Stripe live mode
+- [ ] Configure custom domain
+- [ ] Set up monitoring and error tracking
 
-## How can I deploy this project?
+## 🔐 Security Notes
 
-Simply open [Lovable](https://lovable.dev/projects/adfd5d1e-8e27-4cd7-8c5c-ced83054e2a6) and click on Share -> Publish.
+- Never commit `.env` files or secrets to git
+- Use Supabase service role key only in server environments
+- Configure proper CORS settings in Supabase
+- Set up Row Level Security policies for all tables
+- Use Stripe webhook validation in production
 
-## Can I connect a custom domain to my Lovable project?
+## 📄 License
 
-Yes, you can!
+Private project for Echelon Texas.
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## 🆘 Support
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+For issues or questions:
+- Check the troubleshooting section in this README
+- Review Supabase and Stripe documentation
+- Contact the development team
+
+---
+
+**Note**: This is a React/Vite application, not Next.js. All routing is client-side using React Router.
