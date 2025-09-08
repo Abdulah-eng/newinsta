@@ -121,10 +121,10 @@ const Feed = () => {
       {/* Floating Create Post Button */}
       <Button
         onClick={() => navigate('/portal/create')}
-        className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full bg-gradient-to-r from-gold to-gold-light hover:from-gold-light hover:to-gold shadow-2xl hover:shadow-gold/50 transition-all duration-300 border-2 border-gold/30 hover:border-gold"
+        className="fixed bottom-6 right-6 z-50 h-16 w-16 rounded-full bg-white hover:bg-gray-100 shadow-2xl hover:shadow-white/50 transition-all duration-300 border-4 border-white/20 hover:scale-110"
         size="icon"
       >
-        <Plus className="h-6 w-6 text-black font-bold" />
+        <Plus className="h-8 w-8 text-black font-bold" />
       </Button>
 
       {/* Create Post Section */}
