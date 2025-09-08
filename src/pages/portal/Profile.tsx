@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Settings, Grid, Heart, MessageCircle, RefreshCw, Play } from "lucide-react";
+import { Edit, Settings, Grid, Heart, MessageCircle, RefreshCw, Play, Plus } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -20,6 +21,7 @@ const Profile = () => {
   const [safeModeEnabled, setSafeModeEnabled] = useState(true);
   const { user, profile, subscribed, subscriptionTier, checkSubscription } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   
   // Get mock profile data
   const mockProfile = mockProfiles[0]; // Use first mock profile as current user's profile
@@ -94,7 +96,15 @@ const Profile = () => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <div className="max-w-4xl mx-auto p-6 relative">
+      {/* Floating Create Post Button */}
+      <Button
+        onClick={() => navigate('/portal/create')}
+        className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-lg hover:shadow-xl transition-all duration-300 border-0"
+        size="icon"
+      >
+        <Plus className="h-6 w-6 text-white" />
+      </Button>
       {/* Profile Header */}
       <Card className="bg-charcoal border-gold/20 mb-6">
         <CardContent className="p-6">
