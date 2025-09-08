@@ -3,38 +3,34 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Settings, Grid, Heart, MessageCircle, RefreshCw } from "lucide-react";
+import { Edit, Settings, Grid, Heart, MessageCircle, RefreshCw, Play } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import EditProfileModal from "@/components/EditProfileModal";
+import NSFWBlurOverlay from "@/components/NSFWBlurOverlay";
+import { getUserMockPosts, mockProfiles, type MockPost } from "@/lib/mockData";
 
-interface UserPost {
-  id: string;
-  content: string;
-  image_url?: string;
-  is_nsfw: boolean;
-  created_at: string;
-}
+interface UserPost extends MockPost {}
 
 const Profile = () => {
   const [userPosts, setUserPosts] = useState<UserPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [ageVerified, setAgeVerified] = useState(false);
+  const [safeModeEnabled, setSafeModeEnabled] = useState(true);
   const { user, profile, subscribed, subscriptionTier, checkSubscription } = useAuth();
   const { toast } = useToast();
+  
+  // Get mock profile data
+  const mockProfile = mockProfiles[0]; // Use first mock profile as current user's profile
 
   const fetchUserPosts = async () => {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
-        .from('posts')
-        .select('*')
-        .eq('author_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setUserPosts(data || []);
+      // Use mock data for user's posts
+      const mockUserPosts = getUserMockPosts(user.id, 15);
+      setUserPosts(mockUserPosts);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -48,7 +44,13 @@ const Profile = () => {
 
   useEffect(() => {
     fetchUserPosts();
-  }, [user]);
+    
+    // Set user preferences from profile
+    if (profile) {
+      setAgeVerified(profile.age_verified || false);
+      setSafeModeEnabled(profile.safe_mode_enabled !== false); // Default to true
+    }
+  }, [user, profile]);
 
   const handleProfileUpdated = () => {
     // Refresh subscription status and profile data
@@ -149,26 +151,19 @@ const Profile = () => {
                   <div className="text-white/60 text-sm">Posts</div>
                 </div>
                 <div>
-                  <div className="text-xl font-bold text-white">
-                    {subscribed ? "Active" : "Inactive"}
-                  </div>
-                  <div className="text-white/60 text-sm">Subscription</div>
+                  <div className="text-xl font-bold text-white">{mockProfile.followers.toLocaleString()}</div>
+                  <div className="text-white/60 text-sm">Followers</div>
                 </div>
                 <div>
-                  <div className="text-xl font-bold text-white">
-                    {profile.created_at ? formatDate(profile.created_at) : "Recently"}
-                  </div>
-                  <div className="text-white/60 text-sm">Member Since</div>
+                  <div className="text-xl font-bold text-white">{mockProfile.following.toLocaleString()}</div>
+                  <div className="text-white/60 text-sm">Following</div>
                 </div>
               </div>
 
               <div className="text-white/80">
-                <p>{profile.full_name ? `Welcome to Echelon Texas, ${profile.full_name.split(' ')[0]}!` : 'Welcome to Echelon Texas!'}</p>
-                <p className="text-white/60 text-sm mt-1">
-                  {subscribed 
-                    ? "Thank you for being a premium member of our exclusive community." 
-                    : "Join our premium membership to unlock all features."
-                  }
+                <p className="mb-2">{mockProfile.bio}</p>
+                <p className="text-white/60 text-sm">
+                  Member since {profile?.created_at ? formatDate(profile.created_at) : "Recently"}
                 </p>
                 {!subscribed && (
                   <div className="mt-4">
@@ -214,25 +209,23 @@ const Profile = () => {
               </Button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-3 gap-1">
               {userPosts.map((post) => (
                 <div key={post.id} className="relative group cursor-pointer">
-                  <div className="aspect-square bg-black/30 rounded-lg overflow-hidden">
+                  <div className="aspect-square bg-black/30 overflow-hidden">
                     {post.image_url ? (
-                      post.is_nsfw ? (
-                        <div className="w-full h-full bg-black/60 flex items-center justify-center">
-                          <div className="text-center">
-                            <div className="text-white/60 text-sm mb-2">NSFW Content</div>
-                            <div className="text-xs text-white/40">Tap to view</div>
-                          </div>
-                        </div>
-                      ) : (
+                      <NSFWBlurOverlay
+                        isNSFW={post.is_nsfw}
+                        ageVerified={ageVerified}
+                        safeModeEnabled={safeModeEnabled}
+                        className="w-full h-full"
+                      >
                         <img 
                           src={post.image_url} 
                           alt="Your post" 
                           className="w-full h-full object-cover transition-transform group-hover:scale-105"
                         />
-                      )
+                      </NSFWBlurOverlay>
                     ) : (
                       <div className="w-full h-full bg-charcoal/50 flex items-center justify-center p-4">
                         <p className="text-white/80 text-sm text-center line-clamp-4">
@@ -240,18 +233,28 @@ const Profile = () => {
                         </p>
                       </div>
                     )}
+                    
+                    {/* Video Indicator */}
+                    {post.video_url && (
+                      <div className="absolute top-2 right-2">
+                        <Play className="h-4 w-4 text-white drop-shadow-lg" />
+                      </div>
+                    )}
                   </div>
                   
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/60 transition-colors rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
+                  {/* Hover Overlay with Stats */}
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/60 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
                     <div className="text-white text-center">
-                      <div className="text-xs text-white/80 mb-1">
-                        {new Date(post.created_at).toLocaleDateString()}
+                      <div className="flex items-center space-x-4 text-sm font-medium">
+                        <div className="flex items-center space-x-1">
+                          <Heart className="h-4 w-4" />
+                          <span>{post.likes}</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <MessageCircle className="h-4 w-4" />
+                          <span>{post.comments}</span>
+                        </div>
                       </div>
-                      {post.is_nsfw && (
-                        <Badge variant="destructive" className="text-xs">
-                          NSFW
-                        </Badge>
-                      )}
                     </div>
                   </div>
                 </div>

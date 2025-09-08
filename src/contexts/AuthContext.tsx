@@ -13,6 +13,8 @@ interface Profile {
   is_admin: boolean
   created_at: string
   updated_at: string
+  age_verified?: boolean
+  safe_mode_enabled?: boolean
 }
 
 interface AuthContextType {
