@@ -4,6 +4,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { MessagingProvider } from "@/contexts/MessagingContext";
+import { StoriesProvider } from "@/contexts/StoriesContext";
+import { AdminProvider } from "@/contexts/AdminContext";
+import { FollowProvider } from "@/contexts/FollowContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Header from "./components/Header";
 import Index from "./pages/Index";
@@ -14,10 +18,15 @@ import PaymentSuccess from "./pages/PaymentSuccess";
 import MemberPortal from "./pages/portal/MemberPortal";
 import Feed from "./pages/portal/Feed";
 import Profile from "./pages/portal/Profile";
+import UserProfile from "./pages/portal/UserProfile";
+import FollowersList from "./pages/portal/FollowersList";
 import Documents from "./pages/portal/Documents";
 import CreatePost from "./pages/portal/CreatePostPage";
+import CreatePostTest from "./pages/portal/CreatePostTest";
+import CreateStory from "./pages/portal/CreateStory";
+import Messages from "./pages/portal/Messages";
 import TestData from "./pages/portal/TestData";
-import Admin from "./pages/Admin";
+import AdminEnhanced from "./pages/AdminEnhanced";
 import NotFound from "./pages/NotFound";
 import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
@@ -27,10 +36,14 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <TooltipProvider>
+      <MessagingProvider>
+        <StoriesProvider>
+          <AdminProvider>
+            <FollowProvider>
+              <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
+        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <div className="min-h-screen bg-black">
             <Routes>
               {/* Public routes with header */}
@@ -70,7 +83,12 @@ const App = () => (
               }>
                 <Route index element={<Feed />} />
                 <Route path="create" element={<CreatePost />} />
+                <Route path="create-test" element={<CreatePostTest />} />
+                <Route path="create-story" element={<CreateStory />} />
+                <Route path="messages" element={<Messages />} />
                 <Route path="profile" element={<Profile />} />
+                <Route path="user/:userId" element={<UserProfile />} />
+                <Route path="user/:userId/:type" element={<FollowersList />} />
                 <Route path="documents" element={<Documents />} />
                 <Route path="test" element={<TestData />} />
               </Route>
@@ -78,7 +96,7 @@ const App = () => (
               {/* Admin routes */}
               <Route path="/admin" element={
                 <ProtectedRoute requireAdmin>
-                  <Admin />
+                  <AdminEnhanced />
                 </ProtectedRoute>
               } />
               
@@ -87,7 +105,11 @@ const App = () => (
             </Routes>
           </div>
         </BrowserRouter>
-      </TooltipProvider>
+              </TooltipProvider>
+            </FollowProvider>
+          </AdminProvider>
+        </StoriesProvider>
+      </MessagingProvider>
     </AuthProvider>
   </QueryClientProvider>
 );
