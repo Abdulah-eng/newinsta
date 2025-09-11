@@ -8,7 +8,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useFollow } from "@/contexts/FollowContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Heart, Share2, AlertTriangle, RefreshCw, MapPin, Settings, Plus } from "lucide-react";
+import { Heart, Share2, AlertTriangle, RefreshCw, MapPin, Settings, Plus, MoreHorizontal, Link as LinkIcon, Flag } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
 import FollowButton from "@/components/FollowButton";
 import CreatePost from "./CreatePost";
@@ -389,15 +390,53 @@ const Feed = () => {
                           </Badge>
                         )}
                       </div>
-                      {post.author_id !== user?.id && (
-                        <FollowButton
-                          userId={post.author_id}
-                          userName={post.profiles?.full_name || 'Anonymous'}
-                          variant="outline"
-                          size="sm"
-                          showIcon={false}
-                        />
-                      )}
+                      <div className="flex items-center space-x-2">
+                        {post.author_id !== user?.id && (
+                          <FollowButton
+                            userId={post.author_id}
+                            userName={post.profiles?.full_name || 'Anonymous'}
+                            variant="outline"
+                            size="sm"
+                            showIcon={false}
+                          />
+                        )}
+                        {/* Post actions menu */}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              aria-label="Post actions"
+                              className="text-white/60 hover:text-white p-1 rounded hover:bg-white/10"
+                            >
+                              <MoreHorizontal className="h-5 w-5" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="bg-charcoal border-gold/20">
+                            <DropdownMenuItem
+                              className="text-white/80 focus:text-white"
+                              onClick={() => {
+                                setSelectedPostForReport(post);
+                              }}
+                            >
+                              <Flag className="h-4 w-4 mr-2" /> Report
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-white/80 focus:text-white"
+                              onClick={async () => {
+                                const shareUrl = `${window.location.origin}/post/${post.id}`;
+                                try {
+                                  await navigator.clipboard.writeText(shareUrl);
+                                  toast({ title: "Link Copied", description: "Post link copied to clipboard." });
+                                } catch (e) {
+                                  console.error(e);
+                                }
+                              }}
+                            >
+                              <LinkIcon className="h-4 w-4 mr-2" /> Copy link
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </div>
                     <div className="flex items-center space-x-2 text-white/60 text-sm">
                       <span>{formatDate(post.created_at)}</span>

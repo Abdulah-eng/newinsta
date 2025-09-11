@@ -425,10 +425,10 @@ export const AdminProvider: React.FC<AdminProviderProps> = ({ children }) => {
         .from('reports')
         .select(`
           *,
-          reporter:profiles!reporter_id(*),
-          reported_user:profiles!reported_user_id(*),
-          reported_post:posts(*),
-          resolved_by_user:profiles!resolved_by(*)
+          reporter:profiles!reports_reporter_id_fkey(*),
+          reported_user:profiles!reports_reported_user_id_fkey(*),
+          reported_post:posts!reports_reported_post_id_fkey(*),
+          resolved_by_user:profiles!reports_resolved_by_fkey(*)
         `)
         .order('created_at', { ascending: false });
 
@@ -592,7 +592,7 @@ export const AdminProvider: React.FC<AdminProviderProps> = ({ children }) => {
         .from('user_restrictions')
         .select(`
           *,
-          user:profiles(*),
+          user:profiles!user_restrictions_user_id_fkey(*),
           created_by_user:profiles!user_restrictions_created_by_fkey(*)
         `)
         .order('created_at', { ascending: false });
@@ -687,7 +687,8 @@ export const AdminProvider: React.FC<AdminProviderProps> = ({ children }) => {
         .from('audit_logs')
         .select(`
           *,
-          user:profiles(*)
+          actor:profiles!audit_logs_actor_id_fkey(*),
+          target:profiles!audit_logs_target_user_id_fkey(*)
         `)
         .order('created_at', { ascending: false })
         .limit(100);
@@ -723,7 +724,7 @@ export const AdminProvider: React.FC<AdminProviderProps> = ({ children }) => {
       const { error } = await supabase
         .from('audit_logs')
         .insert({
-          user_id: user.id,
+          actor_id: user.id,
           action_type: actionType,
           target_type: targetType,
           target_id: targetId,
