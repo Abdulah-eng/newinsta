@@ -44,8 +44,12 @@ const AdminDashboard: React.FC = () => {
 
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [selectedReport, setSelectedReport] = useState<any>(null);
+  const [previewReport, setPreviewReport] = useState<any>(null);
+  const [deleteReport, setDeleteReport] = useState<any>(null);
   const [banDialogOpen, setBanDialogOpen] = useState(false);
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [restrictionDialogOpen, setRestrictionDialogOpen] = useState(false);
   const [banReason, setBanReason] = useState('');
   const [banDuration, setBanDuration] = useState<number | undefined>();
@@ -93,6 +97,14 @@ const AdminDashboard: React.FC = () => {
     setReportAction('actioned');
     setReportNotes('');
     setSelectedReport(null);
+  };
+
+  const handleDeleteReportedPost = async () => {
+    if (!deleteReport?.reported_post_id) return;
+    await deletePost(deleteReport.reported_post_id);
+    await resolveReport(deleteReport.id, 'actioned', 'Post deleted');
+    setDeleteDialogOpen(false);
+    setDeleteReport(null);
   };
 
   const handleAddRestriction = async () => {
@@ -405,18 +417,44 @@ const AdminDashboard: React.FC = () => {
                           {format(new Date(report.created_at), 'MMM dd, yyyy')}
                         </TableCell>
                         <TableCell>
-                          {report.status === 'open' && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                setSelectedReport(report);
-                                setReportDialogOpen(true);
-                              }}
-                            >
-                              Resolve
-                            </Button>
-                          )}
+                          <div className="flex items-center gap-2">
+                            {report.reported_post && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setPreviewReport(report);
+                                    setPreviewDialogOpen(true);
+                                  }}
+                                >
+                                  View post
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() => {
+                                    setDeleteReport(report);
+                                    setDeleteDialogOpen(true);
+                                  }}
+                                >
+                                  Delete post
+                                </Button>
+                              </>
+                            )}
+                            {report.status === 'open' && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setSelectedReport(report);
+                                  setReportDialogOpen(true);
+                                }}
+                              >
+                                Resolve
+                              </Button>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -618,6 +656,54 @@ const AdminDashboard: React.FC = () => {
               <Button onClick={handleResolveReport}>
                 Resolve Report
               </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Preview Reported Post */}
+        <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Reported Post</DialogTitle>
+              <DialogDescription>
+                Preview the reported content before taking action.
+              </DialogDescription>
+            </DialogHeader>
+            {previewReport?.reported_post ? (
+              <div className="space-y-3">
+                {previewReport.reported_post.image_url && (
+                  <img
+                    src={previewReport.reported_post.image_url}
+                    alt="Post"
+                    className="w-full rounded"
+                    onError={(e) => {
+                      const t = e.currentTarget as HTMLImageElement;
+                      if (t.src !== '/placeholder.svg') t.src = '/placeholder.svg';
+                    }}
+                  />
+                )}
+                {previewReport.reported_post.content && (
+                  <p className="text-sm">{previewReport.reported_post.content}</p>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500">No post payload available.</p>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Confirm Delete Post */}
+        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete reported post?</DialogTitle>
+              <DialogDescription>
+                This action cannot be undone. The post will be permanently removed and the report will be marked actioned.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+              <Button variant="destructive" onClick={handleDeleteReportedPost}>Delete</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

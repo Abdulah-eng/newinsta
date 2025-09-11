@@ -26,6 +26,7 @@ import {
   UserCheck,
   UserX
 } from "lucide-react";
+import FullScreenPostViewer from "@/components/FullScreenPostViewer";
 
 interface Report {
   id: string;
@@ -45,8 +46,19 @@ interface Report {
     email: string;
   } | null;
   reported_post: {
-    content: string;
+    id: string;
     author_id: string;
+    content: string | null;
+    image_url?: string | null;
+    video_url?: string | null;
+    is_nsfw: boolean;
+    location?: string | null;
+    created_at: string;
+    profiles: {
+      full_name: string | null;
+      avatar_url?: string | null;
+      membership_tier?: string | null;
+    } | null;
   } | null;
 }
 
@@ -79,6 +91,7 @@ const Admin = () => {
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [adminNotes, setAdminNotes] = useState("");
   const [banReason, setBanReason] = useState("");
+  const [viewerOpen, setViewerOpen] = useState(false);
   const { user, profile } = useAuth();
   const { toast } = useToast();
 
@@ -135,17 +148,28 @@ const Admin = () => {
         .from('reports')
         .select(`
           *,
-          reporter:profiles!reports_reporter_id_fkey (
+          reporter:profiles!reporter_id (
             full_name,
             email
           ),
-          reported_user:profiles!reports_reported_user_id_fkey (
+          reported_user:profiles!reported_user_id (
             full_name,
             email
           ),
-          reported_post:posts!reports_reported_post_id_fkey (
+          reported_post:posts!reported_post_id (
+            id,
+            author_id,
             content,
-            author_id
+            image_url,
+            video_url,
+            is_nsfw,
+            location,
+            created_at,
+            profiles:profiles!posts_author_id_fkey(
+              full_name,
+              avatar_url,
+              membership_tier
+            )
           )
         `)
         .order('created_at', { ascending: false })
@@ -213,6 +237,55 @@ const Admin = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const handleDeleteReportedPost = async (report: Report) => {
+    if (!report.reported_post_id) return;
+    try {
+      const { error } = await supabase
+        .from('posts')
+        .delete()
+        .eq('id', report.reported_post_id);
+      if (error) throw error;
+
+      await supabase
+        .from('reports')
+        .update({
+          status: 'actioned',
+          resolved_by: user?.id || null,
+          resolved_at: new Date().toISOString(),
+          admin_notes: adminNotes || 'Post deleted'
+        })
+        .eq('id', report.id);
+
+      toast({ title: 'Post deleted', description: 'Reported post has been removed.' });
+      setSelectedReport(null);
+      setAdminNotes('');
+      fetchReports();
+      fetchStats();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message || 'Failed to delete post.', variant: 'destructive' });
+    }
+  };
+
+  const buildViewerPost = (r: Report) => {
+    if (!r.reported_post) return [] as any[];
+    const p = r.reported_post;
+    return [{
+      id: p.id,
+      author_id: p.author_id,
+      content: p.content || '',
+      image_url: p.image_url || undefined,
+      video_url: p.video_url || undefined,
+      is_nsfw: p.is_nsfw,
+      location: p.location || undefined,
+      created_at: p.created_at,
+      profiles: {
+        full_name: p.profiles?.full_name || 'Unknown',
+        avatar_url: p.profiles?.avatar_url || undefined,
+        membership_tier: (p.profiles?.membership_tier as any) || 'basic'
+      }
+    }];
   };
 
   const handleUserAction = async (userId: string, action: 'ban' | 'unban' | 'verify') => {
@@ -555,6 +628,23 @@ const Admin = () => {
                 >
                   Cancel
                 </Button>
+                {selectedReport.reported_post && (
+                  <Button
+                    onClick={() => setViewerOpen(true)}
+                    variant="outline"
+                    className="border-gold/30 text-gold hover:bg-gold/10"
+                  >
+                    Open Post
+                  </Button>
+                )}
+                {selectedReport.reported_post_id && (
+                  <Button
+                    onClick={() => handleDeleteReportedPost(selectedReport)}
+                    className="bg-red-600 hover:bg-red-700 text-white"
+                  >
+                    Delete Post
+                  </Button>
+                )}
                 <Button
                   onClick={() => handleReportAction(selectedReport.id, 'approve')}
                   className="bg-red-600 hover:bg-red-700 text-white"
@@ -565,6 +655,16 @@ const Admin = () => {
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {selectedReport && viewerOpen && (
+        <FullScreenPostViewer
+          posts={buildViewerPost(selectedReport) as any}
+          currentPostIndex={0}
+          isOpen={viewerOpen}
+          onClose={() => setViewerOpen(false)}
+          onNavigate={() => {}}
+        />
       )}
     </div>
   );

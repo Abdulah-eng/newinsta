@@ -10,9 +10,11 @@ import { useToast } from "@/hooks/use-toast";
 import { Flag } from "lucide-react";
 
 interface ReportModalProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   reportedUserId?: string;
   reportedPostId?: string;
+  forceOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
   onReportSubmitted?: () => void;
 }
 
@@ -32,6 +34,8 @@ const ReportModal = ({
   children, 
   reportedUserId, 
   reportedPostId, 
+  forceOpen, 
+  onOpenChange,
   onReportSubmitted 
 }: ReportModalProps) => {
   const [open, setOpen] = useState(false);
@@ -109,6 +113,12 @@ const ReportModal = ({
     }
   };
 
+  // Allow parent to programmatically open the modal
+  if (forceOpen && !open) {
+    // sync open state when forceOpen becomes true
+    setOpen(true);
+  }
+
   const getReportType = () => {
     if (reportedUserId && reportedPostId) {
       return "post and user";
@@ -121,10 +131,18 @@ const ReportModal = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {children}
-      </DialogTrigger>
+    <Dialog 
+      open={open} 
+      onOpenChange={(next) => {
+        setOpen(next);
+        onOpenChange?.(next);
+      }}
+    >
+      {children && (
+        <DialogTrigger asChild>
+          {children}
+        </DialogTrigger>
+      )}
       <DialogContent className="bg-charcoal border-gold/30 text-white max-w-md">
         <DialogHeader>
           <DialogTitle className="text-gold font-serif flex items-center">

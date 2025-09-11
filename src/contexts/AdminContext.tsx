@@ -425,10 +425,10 @@ export const AdminProvider: React.FC<AdminProviderProps> = ({ children }) => {
         .from('reports')
         .select(`
           *,
-          reporter:profiles!reports_reporter_id_fkey(*),
-          reported_user:profiles!reports_reported_user_id_fkey(*),
-          reported_post:posts!reports_reported_post_id_fkey(*),
-          resolved_by_user:profiles!reports_resolved_by_fkey(*)
+          reporter:profiles!reporter_id(*),
+          reported_user:profiles!reported_user_id(*),
+          reported_post:posts!reported_post_id(*),
+          resolved_by_user:profiles!resolved_by(*)
         `)
         .order('created_at', { ascending: false });
 
@@ -592,8 +592,8 @@ export const AdminProvider: React.FC<AdminProviderProps> = ({ children }) => {
         .from('user_restrictions')
         .select(`
           *,
-          user:profiles!user_restrictions_user_id_fkey(*),
-          created_by_user:profiles!user_restrictions_created_by_fkey(*)
+          user:profiles!user_id(*),
+          created_by_user:profiles!created_by(*)
         `)
         .order('created_at', { ascending: false });
 
@@ -687,8 +687,8 @@ export const AdminProvider: React.FC<AdminProviderProps> = ({ children }) => {
         .from('audit_logs')
         .select(`
           *,
-          actor:profiles!audit_logs_actor_id_fkey(*),
-          target:profiles!audit_logs_target_user_id_fkey(*)
+          actor:profiles!actor_id(*),
+          target:profiles!target_user_id(*)
         `)
         .order('created_at', { ascending: false })
         .limit(100);

@@ -19,8 +19,9 @@ const memberItems = [
   { title: "Create Story", url: "/portal/create-story", icon: Camera },
   { title: "Messages", url: "/portal/messages", icon: MessageCircle },
   { title: "My Profile", url: "/portal/profile", icon: User },
-  { title: "Documents", url: "/portal/documents", icon: FileText },
-  { title: "Test Environment", url: "/portal/test", icon: Settings },
+  // Hidden: Documents and Test Environment per request
+  // { title: "Documents", url: "/portal/documents", icon: FileText },
+  // { title: "Test Environment", url: "/portal/test", icon: Settings },
 ];
 
 const adminItems = [

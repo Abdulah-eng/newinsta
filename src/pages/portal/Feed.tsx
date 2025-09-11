@@ -468,6 +468,12 @@ const Feed = () => {
                         src={post.image_url} 
                         alt="Post content" 
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.currentTarget as HTMLImageElement;
+                          if (target.src !== '/placeholder.svg') {
+                            target.src = '/placeholder.svg';
+                          }
+                        }}
                       />
                     </NSFWBlurOverlay>
                   </div>
@@ -516,15 +522,16 @@ const Feed = () => {
       {/* Report Modal */}
       {selectedPostForReport && (
         <ReportModal
+          forceOpen
           reportedPostId={selectedPostForReport.id}
           reportedUserId={selectedPostForReport.author_id}
+          onOpenChange={(open) => {
+            if (!open) setSelectedPostForReport(null);
+          }}
           onReportSubmitted={() => {
-            setReportModalOpen(false);
             setSelectedPostForReport(null);
           }}
-        >
-          <div />
-        </ReportModal>
+        />
       )}
     </div>
   );
