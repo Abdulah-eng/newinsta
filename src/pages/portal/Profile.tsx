@@ -6,34 +6,81 @@ import { Badge } from "@/components/ui/badge";
 import { Edit, Settings, Grid, Heart, MessageCircle, RefreshCw, Play, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import EditProfileModal from "@/components/EditProfileModal";
 import NSFWBlurOverlay from "@/components/NSFWBlurOverlay";
-import { getUserMockPosts, mockProfiles, type MockPost } from "@/lib/mockData";
+import { Database } from "@/integrations/supabase/types";
 
-interface UserPost extends MockPost {}
+type Post = Database['public']['Tables']['posts']['Row'];
+type Profile = Database['public']['Tables']['profiles']['Row'];
+
+interface UserPost extends Post {
+  profiles?: Profile;
+  likes_count?: number;
+  comments_count?: number;
+}
 
 const Profile = () => {
   const [userPosts, setUserPosts] = useState<UserPost[]>([]);
+  const [followersCount, setFollowersCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [ageVerified, setAgeVerified] = useState(false);
   const [safeModeEnabled, setSafeModeEnabled] = useState(true);
-  const { user, profile, subscribed, subscriptionTier, checkSubscription } = useAuth();
+  const { user, profile, subscribed, subscriptionTier, checkSubscription, isTrialActive, trialDaysRemaining, startTrial } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  
-  // Get mock profile data
-  const mockProfile = mockProfiles[0]; // Use first mock profile as current user's profile
 
   const fetchUserPosts = async () => {
     if (!user) return;
 
     try {
-      // Use mock data for user's posts
-      const mockUserPosts = getUserMockPosts(user.id, 15);
-      setUserPosts(mockUserPosts);
+      setLoading(true);
+      
+      // Fetch real posts from database
+      const { data: posts, error: postsError } = await supabase
+        .from('posts')
+        .select(`
+          *,
+          profiles!posts_author_id_fkey(
+            id,
+            full_name,
+            avatar_url,
+            handle
+          )
+        `)
+        .eq('author_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (postsError) throw postsError;
+
+      // Process posts to include counts
+      const processedPosts = await Promise.all(
+        (posts || []).map(async (post) => {
+          // Get likes count
+          const { count: likesCount } = await supabase
+            .from('likes')
+            .select('*', { count: 'exact', head: true })
+            .eq('post_id', post.id);
+
+          // Get comments count
+          const { count: commentsCount } = await supabase
+            .from('comments')
+            .select('*', { count: 'exact', head: true })
+            .eq('post_id', post.id);
+
+          return {
+            ...post,
+            likes_count: likesCount || 0,
+            comments_count: commentsCount || 0
+          };
+        })
+      );
+
+      setUserPosts(processedPosts);
     } catch (error: any) {
+      console.error('Error loading posts:', error);
       toast({
         title: "Error",
         description: "Failed to load your posts.",
@@ -44,8 +91,37 @@ const Profile = () => {
     }
   };
 
+  const fetchFollowStats = async () => {
+    if (!user) return;
+
+    try {
+      // Fetch followers count
+      const { count: followersCount, error: followersError } = await supabase
+        .from('follows')
+        .select('*', { count: 'exact', head: true })
+        .eq('following_id', user.id);
+
+      if (followersError) throw followersError;
+
+      // Fetch following count
+      const { count: followingCount, error: followingError } = await supabase
+        .from('follows')
+        .select('*', { count: 'exact', head: true })
+        .eq('follower_id', user.id);
+
+      if (followingError) throw followingError;
+
+      setFollowersCount(followersCount || 0);
+      setFollowingCount(followingCount || 0);
+    } catch (error: any) {
+      console.error('Error loading follow stats:', error);
+      // Don't show error toast for follow stats as it's not critical
+    }
+  };
+
   useEffect(() => {
     fetchUserPosts();
+    fetchFollowStats();
     
     // Set user preferences from profile
     if (profile) {
@@ -57,6 +133,9 @@ const Profile = () => {
   const handleProfileUpdated = () => {
     // Refresh subscription status and profile data
     checkSubscription();
+    // Refresh posts and follow stats
+    fetchUserPosts();
+    fetchFollowStats();
   };
 
   const formatDate = (dateString: string) => {
@@ -68,6 +147,7 @@ const Profile = () => {
 
   const getMembershipLevel = () => {
     if (!subscribed) return "Free Member";
+    if (isTrialActive) return `Trial Member (${trialDaysRemaining} days left)`;
     return subscriptionTier === "premium" ? "Premium Member" : "Elite Member";
   };
 
@@ -129,7 +209,7 @@ const Profile = () => {
                       </Badge>
                     )}
                   </div>
-                  <p className="text-white/60">@{profile.full_name?.toLowerCase().replace(/\s+/g, '') || 'member'}</p>
+                  <p className="text-white/60">@{profile.handle || profile.full_name?.toLowerCase().replace(/\s+/g, '') || 'member'}</p>
                   <Badge className={`${getMembershipBadgeColor()} font-medium mt-2`}>
                     {getMembershipLevel()}
                   </Badge>
@@ -160,26 +240,71 @@ const Profile = () => {
                   <div className="text-xl font-bold text-white">{userPosts.length}</div>
                   <div className="text-white/60 text-sm">Posts</div>
                 </div>
-                <div>
-                  <div className="text-xl font-bold text-white">{mockProfile.followers.toLocaleString()}</div>
+                <button
+                  onClick={() => navigate(`/portal/user/${user?.id}/followers`)}
+                  className="hover:bg-white/5 rounded-lg p-2 transition-colors"
+                >
+                  <div className="text-xl font-bold text-white hover:text-gold transition-colors">
+                    {followersCount.toLocaleString()}
+                  </div>
                   <div className="text-white/60 text-sm">Followers</div>
-                </div>
-                <div>
-                  <div className="text-xl font-bold text-white">{mockProfile.following.toLocaleString()}</div>
+                </button>
+                <button
+                  onClick={() => navigate(`/portal/user/${user?.id}/following`)}
+                  className="hover:bg-white/5 rounded-lg p-2 transition-colors"
+                >
+                  <div className="text-xl font-bold text-white hover:text-gold transition-colors">
+                    {followingCount.toLocaleString()}
+                  </div>
                   <div className="text-white/60 text-sm">Following</div>
-                </div>
+                </button>
               </div>
 
               <div className="text-white/80">
-                <p className="mb-2">{mockProfile.bio}</p>
+                <p className="mb-2">{profile?.bio || "No bio yet"}</p>
+                
+                {/* Social Media Profiles */}
+                {(profile?.sdc_username || profile?.mutual_profile || profile?.fb_profile) && (
+                  <div className="mb-4">
+                    <h4 className="text-gold font-semibold mb-2">Social Profiles</h4>
+                    <div className="space-y-1 text-sm">
+                      {profile?.sdc_username && (
+                        <div className="flex items-center space-x-2">
+                          <span className="text-white/60">SDC:</span>
+                          <span className="text-gold">@{profile.sdc_username}</span>
+                        </div>
+                      )}
+                      {profile?.mutual_profile && (
+                        <div className="flex items-center space-x-2">
+                          <span className="text-white/60">MUTUAL/S:</span>
+                          <span className="text-gold">@{profile.mutual_profile}</span>
+                        </div>
+                      )}
+                      {profile?.fb_profile && (
+                        <div className="flex items-center space-x-2">
+                          <span className="text-white/60">Facebook:</span>
+                          <span className="text-gold">{profile.fb_profile}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
                 <p className="text-white/60 text-sm">
                   Member since {profile?.created_at ? formatDate(profile.created_at) : "Recently"}
                 </p>
                 {!subscribed && (
-                  <div className="mt-4">
+                  <div className="mt-4 space-y-3">
+                    <Button 
+                      onClick={startTrial}
+                      className="bg-gold hover:bg-gold-light text-black font-semibold w-full"
+                    >
+                      Start 3-Day Free Trial
+                    </Button>
                     <Button 
                       onClick={() => window.location.href = '/membership'}
-                      className="bg-gold hover:bg-gold-light text-black font-semibold"
+                      variant="outline"
+                      className="border-gold/50 text-gold hover:bg-gold/20 w-full"
                     >
                       Subscribe for $20/month
                     </Button>
@@ -197,7 +322,10 @@ const Profile = () => {
           <CardTitle className="text-gold font-serif">Your Posts</CardTitle>
           <div className="flex items-center space-x-2">
             <Button
-              onClick={fetchUserPosts}
+              onClick={() => {
+                fetchUserPosts();
+                fetchFollowStats();
+              }}
               variant="ghost"
               size="sm"
               className="text-gold hover:text-gold-light"

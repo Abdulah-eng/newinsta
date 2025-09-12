@@ -1,6 +1,14 @@
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import { 
   Users, 
   AlertTriangle, 
@@ -10,90 +18,403 @@ import {
   Eye,
   Ban,
   CheckCircle,
-  XCircle
+  XCircle,
+  Search,
+  RefreshCw,
+  MessageSquare,
+  Flag,
+  UserCheck,
+  UserX
 } from "lucide-react";
+import FullScreenPostViewer from "@/components/FullScreenPostViewer";
+
+interface Report {
+  id: string;
+  reporter_id: string;
+  reported_user_id: string | null;
+  reported_post_id: string | null;
+  reason: string;
+  description: string | null;
+  status: string;
+  created_at: string;
+  reporter: {
+    full_name: string | null;
+    email: string;
+  };
+  reported_user: {
+    full_name: string | null;
+    email: string;
+  } | null;
+  reported_post: {
+    id: string;
+    author_id: string;
+    content: string | null;
+    image_url?: string | null;
+    video_url?: string | null;
+    is_nsfw: boolean;
+    location?: string | null;
+    created_at: string;
+    profiles: {
+      full_name: string | null;
+      avatar_url?: string | null;
+      membership_tier?: string | null;
+    } | null;
+  } | null;
+}
+
+interface User {
+  id: string;
+  email: string;
+  full_name: string | null;
+  handle: string | null;
+  is_admin: boolean;
+  is_banned: boolean;
+  ban_reason: string | null;
+  created_at: string;
+  last_active: string | null;
+  post_count: number;
+}
 
 const Admin = () => {
-  // TODO: Replace with actual data from Supabase
-  const stats = {
-    totalMembers: 1247,
-    activeMembers: 892,
-    pendingReports: 8,
-    monthlyRevenue: 24940,
-    postsThisMonth: 445,
-    moderationQueue: 12
-  };
+  const [stats, setStats] = useState({
+    totalMembers: 0,
+    activeMembers: 0,
+    pendingReports: 0,
+    monthlyRevenue: 0,
+    postsThisMonth: 0,
+    moderationQueue: 0
+  });
+  const [reports, setReports] = useState<Report[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+  const [adminNotes, setAdminNotes] = useState("");
+  const [banReason, setBanReason] = useState("");
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const { user, profile } = useAuth();
+  const { toast } = useToast();
 
-  const pendingReports = [
-    {
-      id: 1,
-      reportedUser: "user123",
-      reportedBy: "member456", 
-      reason: "Inappropriate Content",
-      postId: "post789",
-      timestamp: "2 hours ago",
-      status: "pending"
-    },
-    {
-      id: 2,
-      reportedUser: "member789",
-      reportedBy: "user321",
-      reason: "Harassment",
-      postId: null,
-      timestamp: "4 hours ago", 
-      status: "pending"
-    },
-    {
-      id: 3,
-      reportedUser: "user555",
-      reportedBy: "member888",
-      reason: "Spam",
-      postId: "post456",
-      timestamp: "6 hours ago",
-      status: "pending"
+  const fetchStats = async () => {
+    try {
+      // Get total members
+      const { count: totalMembers } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true });
+
+      // Get active members (logged in within last 30 days)
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const { count: activeMembers } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .gte('last_active', thirtyDaysAgo);
+
+      // Get pending reports
+      const { count: pendingReports } = await supabase
+        .from('reports')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'pending');
+
+      // Get posts this month
+      const thisMonth = new Date();
+      thisMonth.setDate(1);
+      const { count: postsThisMonth } = await supabase
+        .from('posts')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', thisMonth.toISOString());
+
+      // Get monthly revenue (mock calculation)
+      const { count: subscribedUsers } = await supabase
+        .from('subscribers')
+        .select('*', { count: 'exact', head: true })
+        .eq('subscribed', true);
+
+      setStats({
+        totalMembers: totalMembers || 0,
+        activeMembers: activeMembers || 0,
+        pendingReports: pendingReports || 0,
+        monthlyRevenue: (subscribedUsers || 0) * 20, // $20 per month
+        postsThisMonth: postsThisMonth || 0,
+        moderationQueue: pendingReports || 0
+      });
+    } catch (error) {
+      console.error('Error fetching stats:', error);
     }
-  ];
+  };
 
-  const recentMembers = [
-    {
-      id: 1,
-      name: "Sarah Johnson",
-      email: "sarah@example.com",
-      joinDate: "2024-03-15",
-      status: "active",
-      verified: true
-    },
-    {
-      id: 2,
-      name: "Michael Chen", 
-      email: "michael@example.com",
-      joinDate: "2024-03-14",
-      status: "active",
-      verified: false
-    },
-    {
-      id: 3,
-      name: "Emma Rodriguez",
-      email: "emma@example.com", 
-      joinDate: "2024-03-13",
-      status: "pending",
-      verified: false
+  const fetchReports = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('reports')
+        .select(`
+          *,
+          reporter:profiles!reporter_id (
+            full_name,
+            email
+          ),
+          reported_user:profiles!reported_user_id (
+            full_name,
+            email
+          ),
+          reported_post:posts!reported_post_id (
+            id,
+            author_id,
+            content,
+            image_url,
+            video_url,
+            is_nsfw,
+            location,
+            created_at,
+            profiles:profiles!posts_author_id_fkey(
+              full_name,
+              avatar_url,
+              membership_tier
+            )
+          )
+        `)
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (error) throw error;
+      setReports(data || []);
+    } catch (error) {
+      console.error('Error fetching reports:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load reports.",
+        variant: "destructive",
+      });
     }
-  ];
-
-  const handleReportAction = (reportId: number, action: 'approve' | 'reject') => {
-    // TODO: Implement with Supabase - removed intrusive alert
   };
 
-  const handleUserAction = (userId: number, action: 'ban' | 'verify') => {
-    // TODO: Implement with Supabase - removed intrusive alert
+  const fetchUsers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('user_stats')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+      setUsers(data || []);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load users.",
+        variant: "destructive",
+      });
+    }
   };
+
+  const handleReportAction = async (reportId: string, action: 'approve' | 'dismiss') => {
+    try {
+      const { error } = await supabase
+        .from('reports')
+        .update({
+          status: action === 'approve' ? 'resolved' : 'dismissed',
+          resolved_by: user?.id,
+          resolved_at: new Date().toISOString(),
+          admin_notes: adminNotes || null
+        })
+        .eq('id', reportId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: `Report ${action === 'approve' ? 'resolved' : 'dismissed'} successfully.`,
+      });
+
+      setSelectedReport(null);
+      setAdminNotes("");
+      fetchReports();
+      fetchStats();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update report.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteReportedPost = async (report: Report) => {
+    if (!report.reported_post_id) return;
+    try {
+      const { error } = await supabase
+        .from('posts')
+        .delete()
+        .eq('id', report.reported_post_id);
+      if (error) throw error;
+
+      await supabase
+        .from('reports')
+        .update({
+          status: 'actioned',
+          resolved_by: user?.id || null,
+          resolved_at: new Date().toISOString(),
+          admin_notes: adminNotes || 'Post deleted'
+        })
+        .eq('id', report.id);
+
+      toast({ title: 'Post deleted', description: 'Reported post has been removed.' });
+      setSelectedReport(null);
+      setAdminNotes('');
+      fetchReports();
+      fetchStats();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message || 'Failed to delete post.', variant: 'destructive' });
+    }
+  };
+
+  const buildViewerPost = (r: Report) => {
+    if (!r.reported_post) return [] as any[];
+    const p = r.reported_post;
+    return [{
+      id: p.id,
+      author_id: p.author_id,
+      content: p.content || '',
+      image_url: p.image_url || undefined,
+      video_url: p.video_url || undefined,
+      is_nsfw: p.is_nsfw,
+      location: p.location || undefined,
+      created_at: p.created_at,
+      profiles: {
+        full_name: p.profiles?.full_name || 'Unknown',
+        avatar_url: p.profiles?.avatar_url || undefined,
+        membership_tier: (p.profiles?.membership_tier as any) || 'basic'
+      }
+    }];
+  };
+
+  const handleUserAction = async (userId: string, action: 'ban' | 'unban' | 'verify') => {
+    try {
+      if (action === 'ban') {
+        if (!banReason.trim()) {
+          toast({
+            title: "Error",
+            description: "Please provide a reason for banning the user.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        const { error } = await supabase
+          .from('profiles')
+          .update({
+            is_banned: true,
+            ban_reason: banReason.trim()
+          })
+          .eq('id', userId);
+
+        if (error) throw error;
+
+        toast({
+          title: "User Banned",
+          description: "User has been banned successfully.",
+        });
+      } else if (action === 'unban') {
+        const { error } = await supabase
+          .from('profiles')
+          .update({
+            is_banned: false,
+            ban_reason: null
+          })
+          .eq('id', userId);
+
+        if (error) throw error;
+
+        toast({
+          title: "User Unbanned",
+          description: "User has been unbanned successfully.",
+        });
+      } else if (action === 'verify') {
+        const { error } = await supabase
+          .from('profiles')
+          .update({
+            age_verified: true
+          })
+          .eq('id', userId);
+
+        if (error) throw error;
+
+        toast({
+          title: "User Verified",
+          description: "User has been age verified successfully.",
+        });
+      }
+
+      setBanReason("");
+      fetchUsers();
+      fetchStats();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update user.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      await Promise.all([
+        fetchStats(),
+        fetchReports(),
+        fetchUsers()
+      ]);
+      setLoading(false);
+    };
+
+    loadData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-screen">
+        <div className="text-gold text-xl font-serif">Loading admin dashboard...</div>
+      </div>
+    );
+  }
+
+  const filteredUsers = users.filter(user => 
+    user.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    user.handle?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-serif text-gold">Admin Dashboard</h1>
-        <Badge className="bg-gold text-black">Administrator</Badge>
+        <div className="flex items-center space-x-2">
+          <Badge className="bg-gold text-black">Administrator</Badge>
+          <Button
+            onClick={() => {
+              fetchStats();
+              fetchReports();
+              fetchUsers();
+            }}
+            variant="outline"
+            size="sm"
+            className="border-gold/30 text-gold hover:bg-gold/20"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Stats Overview */}
@@ -105,7 +426,7 @@ const Admin = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-white">{stats.totalMembers.toLocaleString()}</div>
-            <p className="text-xs text-green-400 mt-1">+12 this week</p>
+            <p className="text-xs text-green-400 mt-1">+{stats.activeMembers} active</p>
           </CardContent>
         </Card>
 
@@ -116,7 +437,7 @@ const Admin = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-white">${stats.monthlyRevenue.toLocaleString()}</div>
-            <p className="text-xs text-green-400 mt-1">+8.2% from last month</p>
+            <p className="text-xs text-green-400 mt-1">From {Math.floor(stats.monthlyRevenue / 20)} subscribers</p>
           </CardContent>
         </Card>
 
@@ -142,96 +463,209 @@ const Admin = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {pendingReports.map((report) => (
-              <div key={report.id} className="border border-gold/20 rounded-lg p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-white">@{report.reportedUser}</p>
-                    <p className="text-sm text-white/60">Reported by @{report.reportedBy}</p>
-                    <p className="text-sm text-red-400">{report.reason}</p>
+            {reports.length === 0 ? (
+              <div className="text-center text-white/60 py-8">No reports to review</div>
+            ) : (
+              reports.map((report) => (
+                <div key={report.id} className="border border-gold/20 rounded-lg p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-white">
+                        {report.reported_user?.full_name || 'Unknown User'}
+                      </p>
+                      <p className="text-sm text-white/60">
+                        Reported by {report.reporter.full_name || report.reporter.email}
+                      </p>
+                      <p className="text-sm text-red-400">{report.reason}</p>
+                      {report.description && (
+                        <p className="text-sm text-white/80 mt-1">{report.description}</p>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-white/60">{formatDate(report.created_at)}</p>
+                      <Badge 
+                        variant={report.status === 'pending' ? 'destructive' : 'secondary'}
+                        className="mt-1"
+                      >
+                        {report.status}
+                      </Badge>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-xs text-white/60">{report.timestamp}</p>
-                    {report.postId && (
-                      <Button variant="ghost" size="sm" className="text-gold hover:bg-gold/20">
-                        <Eye className="h-4 w-4 mr-1" />
-                        View Post
+                  <div className="flex space-x-2">
+                    <Button 
+                      onClick={() => {
+                        setSelectedReport(report);
+                        setAdminNotes(report.admin_notes || '');
+                      }}
+                      size="sm" 
+                      className="bg-red-600 hover:bg-red-700 text-white"
+                    >
+                      <Eye className="h-4 w-4 mr-1" />
+                      Review
+                    </Button>
+                    <Button 
+                      onClick={() => handleReportAction(report.id, 'dismiss')}
+                      variant="outline" 
+                      size="sm"
+                      className="border-gold/50 text-gold hover:bg-gold/20"
+                    >
+                      <XCircle className="h-4 w-4 mr-1" />
+                      Dismiss
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+
+        {/* User Management */}
+        <Card className="bg-charcoal border-gold/20">
+          <CardHeader>
+            <CardTitle className="text-gold font-serif">User Management</CardTitle>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/50" />
+              <Input
+                placeholder="Search users..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 bg-black border-gold/30 text-white focus:border-gold"
+              />
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4 max-h-[400px] overflow-y-auto">
+            {filteredUsers.length === 0 ? (
+              <div className="text-center text-white/60 py-8">No users found</div>
+            ) : (
+              filteredUsers.map((user) => (
+                <div key={user.id} className="flex items-center justify-between border border-gold/20 rounded-lg p-4">
+                  <div>
+                    <p className="font-medium text-white">{user.full_name || 'Anonymous'}</p>
+                    <p className="text-sm text-white/60">{user.email}</p>
+                    <p className="text-xs text-white/40">
+                      Joined: {formatDate(user.created_at)}
+                    </p>
+                    <div className="flex space-x-2 mt-2">
+                      <Badge 
+                        variant={user.is_banned ? 'destructive' : 'default'}
+                        className={user.is_banned ? 'bg-red-600' : 'bg-green-600'}
+                      >
+                        {user.is_banned ? 'Banned' : 'Active'}
+                      </Badge>
+                      {user.is_admin && (
+                        <Badge className="bg-gold/20 text-gold">Admin</Badge>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex space-x-2">
+                    {!user.is_banned ? (
+                      <Button 
+                        onClick={() => {
+                          setBanReason("");
+                          handleUserAction(user.id, 'ban');
+                        }}
+                        size="sm"
+                        className="bg-red-600 hover:bg-red-700 text-white"
+                      >
+                        <Ban className="h-4 w-4" />
+                      </Button>
+                    ) : (
+                      <Button 
+                        onClick={() => handleUserAction(user.id, 'unban')}
+                        size="sm"
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        <UserCheck className="h-4 w-4" />
                       </Button>
                     )}
                   </div>
                 </div>
-                <div className="flex space-x-2">
-                  <Button 
-                    onClick={() => handleReportAction(report.id, 'approve')}
-                    size="sm" 
-                    className="bg-red-600 hover:bg-red-700 text-white"
-                  >
-                    <XCircle className="h-4 w-4 mr-1" />
-                    Take Action
-                  </Button>
-                  <Button 
-                    onClick={() => handleReportAction(report.id, 'reject')}
-                    variant="outline" 
-                    size="sm"
-                    className="border-gold/50 text-gold hover:bg-gold/20"
-                  >
-                    <CheckCircle className="h-4 w-4 mr-1" />
-                    Dismiss
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        {/* Recent Members */}
-        <Card className="bg-charcoal border-gold/20">
-          <CardHeader>
-            <CardTitle className="text-gold font-serif">Recent Members</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {recentMembers.map((member) => (
-              <div key={member.id} className="flex items-center justify-between border border-gold/20 rounded-lg p-4">
-                <div>
-                  <p className="font-medium text-white">{member.name}</p>
-                  <p className="text-sm text-white/60">{member.email}</p>
-                  <p className="text-xs text-white/40">Joined: {member.joinDate}</p>
-                  <div className="flex space-x-2 mt-2">
-                    <Badge 
-                      variant={member.status === 'active' ? 'default' : 'secondary'}
-                      className={member.status === 'active' ? 'bg-green-600' : ''}
-                    >
-                      {member.status}
-                    </Badge>
-                    {member.verified && (
-                      <Badge className="bg-gold/20 text-gold">Verified</Badge>
-                    )}
-                  </div>
-                </div>
-                <div className="flex space-x-2">
-                  {!member.verified && (
-                    <Button 
-                      onClick={() => handleUserAction(member.id, 'verify')}
-                      size="sm"
-                      className="bg-gold hover:bg-gold-light text-black"
-                    >
-                      Verify
-                    </Button>
-                  )}
-                  <Button 
-                    onClick={() => handleUserAction(member.id, 'ban')}
-                    variant="outline" 
-                    size="sm"
-                    className="border-red-500 text-red-400 hover:bg-red-500/20"
-                  >
-                    <Ban className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </CardContent>
         </Card>
       </div>
+
+      {/* Report Review Modal */}
+      {selectedReport && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="bg-charcoal border-gold/30 text-white max-w-md w-full mx-4">
+            <CardHeader>
+              <CardTitle className="text-gold font-serif">Review Report</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label className="text-white">Report Details</Label>
+                <div className="bg-black/30 p-3 rounded border border-gold/20">
+                  <p><strong>Reason:</strong> {selectedReport.reason}</p>
+                  <p><strong>Reported User:</strong> {selectedReport.reported_user?.full_name || 'Unknown'}</p>
+                  <p><strong>Reporter:</strong> {selectedReport.reporter.full_name || selectedReport.reporter.email}</p>
+                  {selectedReport.description && (
+                    <p><strong>Description:</strong> {selectedReport.description}</p>
+                  )}
+                </div>
+              </div>
+              
+              <div>
+                <Label htmlFor="admin-notes" className="text-white">Admin Notes</Label>
+                <Textarea
+                  id="admin-notes"
+                  value={adminNotes}
+                  onChange={(e) => setAdminNotes(e.target.value)}
+                  placeholder="Add notes about this report..."
+                  className="bg-black border-gold/30 text-white focus:border-gold"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <Button
+                  onClick={() => {
+                    setSelectedReport(null);
+                    setAdminNotes("");
+                  }}
+                  variant="outline"
+                  className="border-gold/30 text-gold hover:bg-gold/10"
+                >
+                  Cancel
+                </Button>
+                {selectedReport.reported_post && (
+                  <Button
+                    onClick={() => setViewerOpen(true)}
+                    variant="outline"
+                    className="border-gold/30 text-gold hover:bg-gold/10"
+                  >
+                    Open Post
+                  </Button>
+                )}
+                {selectedReport.reported_post_id && (
+                  <Button
+                    onClick={() => handleDeleteReportedPost(selectedReport)}
+                    className="bg-red-600 hover:bg-red-700 text-white"
+                  >
+                    Delete Post
+                  </Button>
+                )}
+                <Button
+                  onClick={() => handleReportAction(selectedReport.id, 'approve')}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  Take Action
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {selectedReport && viewerOpen && (
+        <FullScreenPostViewer
+          posts={buildViewerPost(selectedReport) as any}
+          currentPostIndex={0}
+          isOpen={viewerOpen}
+          onClose={() => setViewerOpen(false)}
+          onNavigate={() => {}}
+        />
+      )}
     </div>
   );
 };

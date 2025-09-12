@@ -5,14 +5,19 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/lib/supabase";
+import { useFollow } from "@/contexts/FollowContext";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Heart, Share2, AlertTriangle, RefreshCw, MapPin, Settings, Plus } from "lucide-react";
+import { Heart, Share2, AlertTriangle, RefreshCw, MapPin, Settings, Plus, MoreHorizontal, Link as LinkIcon, Flag } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
+import FollowButton from "@/components/FollowButton";
 import CreatePost from "./CreatePost";
 import CommentSection from "@/components/CommentSection";
 import NSFWBlurOverlay from "@/components/NSFWBlurOverlay";
 import PostInteractions from "@/components/PostInteractions";
+import StoriesDisplay from "@/components/StoriesDisplay";
+import ReportModal from "@/components/ReportModal";
 import { mockPosts, type MockPost } from "@/lib/mockData";
 
 interface Post {
@@ -39,23 +44,55 @@ const Feed = () => {
   const [showNsfw, setShowNsfw] = useState(false);
   const [safeModeEnabled, setSafeModeEnabled] = useState(true);
   const [ageVerified, setAgeVerified] = useState(false);
-  const { user, subscribed, profile } = useAuth();
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [selectedPostForReport, setSelectedPostForReport] = useState<Post | null>(null);
+  const { user, subscribed, profile, updateProfile } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
   const fetchPosts = async () => {
     try {
-      // Use mock data for demonstration
-      const mockPostsData = mockPosts.map(post => ({
-        ...post,
-        profiles: {
-          full_name: post.profiles.full_name,
-          avatar_url: post.profiles.avatar_url,
-          membership_tier: post.profiles.membership_tier
-        }
-      }));
+      setLoading(true);
       
-      setPosts(mockPostsData);
+      // Fetch real posts from database
+      const { data: postsData, error } = await supabase
+        .from('posts')
+        .select(`
+          *,
+          profiles!posts_author_id_fkey (
+            full_name,
+            avatar_url,
+            membership_tier,
+            handle
+          ),
+          likes:likes(count),
+          comments:comments(count)
+        `)
+        .eq('is_hidden', false)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Transform the data to match our interface
+      const transformedPosts = postsData?.map(post => ({
+        id: post.id,
+        author_id: post.author_id,
+        content: post.content,
+        image_url: post.image_url,
+        video_url: post.video_url,
+        is_nsfw: post.is_nsfw,
+        location: post.location,
+        created_at: post.created_at,
+        likes: post.likes?.[0]?.count || 0,
+        comments: post.comments?.[0]?.count || 0,
+        profiles: {
+          full_name: post.profiles?.full_name || 'Unknown User',
+          avatar_url: post.profiles?.avatar_url,
+          membership_tier: post.profiles?.membership_tier || 'basic'
+        }
+      })) || [];
+
+      setPosts(transformedPosts);
     } catch (error: any) {
       console.error('Error fetching posts:', error);
       toast({
@@ -68,6 +105,46 @@ const Feed = () => {
     }
   };
 
+  const handleShare = async (post: Post) => {
+    try {
+      // Create share URL
+      const shareUrl = `${window.location.origin}/post/${post.id}`;
+      
+      // Try to use Web Share API if available
+      if (navigator.share) {
+        await navigator.share({
+          title: `Post by ${post.profiles.full_name}`,
+          text: post.content,
+          url: shareUrl,
+        });
+      } else {
+        // Fallback to clipboard
+        await navigator.clipboard.writeText(shareUrl);
+        toast({
+          title: "Link Copied",
+          description: "Post link has been copied to your clipboard.",
+        });
+      }
+    } catch (error: any) {
+      // If Web Share API fails, fallback to clipboard
+      try {
+        const shareUrl = `${window.location.origin}/post/${post.id}`;
+        await navigator.clipboard.writeText(shareUrl);
+        toast({
+          title: "Link Copied",
+          description: "Post link has been copied to your clipboard.",
+        });
+      } catch (clipboardError) {
+        toast({
+          title: "Error",
+          description: "Failed to share post. Please try again.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+
   useEffect(() => {
     fetchPosts();
     
@@ -77,6 +154,43 @@ const Feed = () => {
       setSafeModeEnabled(profile.safe_mode_enabled !== false); // Default to true
     }
   }, [profile]);
+
+  // Subscribe to real-time post updates
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('posts')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'posts'
+        },
+        (payload) => {
+          // Refresh posts when new post is created
+          fetchPosts();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'posts'
+        },
+        (payload) => {
+          // Refresh posts when post is updated
+          fetchPosts();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -106,7 +220,13 @@ const Feed = () => {
     }
   };
 
-  const filteredPosts = posts.filter(post => showNsfw || !post.is_nsfw);
+  const filteredPosts = posts.filter(post => {
+    // Show non-NSFW posts always
+    if (!post.is_nsfw) return true;
+    
+    // For NSFW posts, show only if user has age verification and safe mode is disabled
+    return ageVerified && !safeModeEnabled;
+  });
 
   if (loading) {
     return (
@@ -127,19 +247,60 @@ const Feed = () => {
         <Plus className="h-8 w-8 text-black font-bold" />
       </Button>
 
-      {/* Create Post Section */}
-      <CreatePost onPostCreated={fetchPosts} />
+      {/* Stories Section */}
+        <StoriesDisplay />
+
+      {/* Create Post Section - Simplified for Feed */}
+      <Card className="bg-charcoal border-gold/20">
+        <CardContent className="p-4">
+          <div className="flex items-center space-x-3">
+            <Avatar className="h-10 w-10">
+              <AvatarImage src={profile?.avatar_url || undefined} />
+              <AvatarFallback>
+                {profile?.full_name?.charAt(0).toUpperCase() || 'U'}
+              </AvatarFallback>
+            </Avatar>
+            <Button
+              onClick={() => navigate('/portal/create')}
+              variant="outline"
+              className="flex-1 justify-start text-left text-gold border-gold hover:border-gold hover:text-gold"
+            >
+              What's on your mind?
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Feed Controls */}
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-serif text-gold">Community Feed</h2>
         <div className="flex items-center space-x-4">
+          
           <div className="flex items-center space-x-2">
             <Settings className="h-4 w-4 text-white/60" />
             <span className="text-white/60 text-sm">Safe Mode</span>
             <Switch
               checked={safeModeEnabled}
-              onCheckedChange={setSafeModeEnabled}
+              onCheckedChange={async (checked) => {
+                setSafeModeEnabled(checked);
+                // Update user profile in database and context
+                if (user && updateProfile) {
+                  try {
+                    await updateProfile({ safe_mode_enabled: checked });
+                    toast({
+                      title: "Success",
+                      description: `Safe mode ${checked ? 'enabled' : 'disabled'}.`,
+                    });
+                  } catch (error) {
+                    console.error('Error updating safe mode:', error);
+                    toast({
+                      title: "Error",
+                      description: "Failed to update safe mode setting.",
+                      variant: "destructive",
+                    });
+                  }
+                }
+              }}
               className="data-[state=checked]:bg-gold"
             />
           </div>
@@ -194,32 +355,88 @@ const Feed = () => {
             </CardContent>
           </Card>
         ) : (
+          /* Original List View */
           filteredPosts.map((post) => (
             <Card key={post.id} className="bg-charcoal border-gold/20 overflow-hidden">
               <CardHeader className="pb-3">
                 <div className="flex items-start space-x-3">
-                  <Avatar className="h-10 w-10">
+                  <Avatar 
+                    className="h-10 w-10 cursor-pointer hover:ring-2 hover:ring-gold/50 transition-all"
+                    onClick={() => navigate(`/portal/user/${post.author_id}`)}
+                  >
                     <AvatarImage src={post.profiles?.avatar_url || ''} />
                     <AvatarFallback className="bg-gold text-black">
                       {post.profiles?.full_name?.charAt(0) || 'U'}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center space-x-2 mb-1">
-                      <p className="text-white font-medium">
-                        {post.profiles?.full_name || 'Anonymous'}
-                      </p>
-                      {post.profiles?.membership_tier && (
-                        <Badge className={getMembershipBadgeColor(post.profiles.membership_tier)}>
-                          {post.profiles.membership_tier.toUpperCase()}
-                        </Badge>
-                      )}
-                      {post.is_nsfw && (
-                        <Badge variant="destructive" className="flex items-center space-x-1">
-                          <AlertTriangle className="h-3 w-3" />
-                          <span>NSFW</span>
-                        </Badge>
-                      )}
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => navigate(`/portal/user/${post.author_id}`)}
+                          className="text-white font-medium hover:text-gold transition-colors cursor-pointer"
+                        >
+                          {post.profiles?.full_name || 'Anonymous'}
+                        </button>
+                        {post.profiles?.membership_tier && (
+                          <Badge className={getMembershipBadgeColor(post.profiles.membership_tier)}>
+                            {post.profiles.membership_tier.toUpperCase()}
+                          </Badge>
+                        )}
+                        {post.is_nsfw && (
+                          <Badge variant="destructive" className="flex items-center space-x-1">
+                            <AlertTriangle className="h-3 w-3" />
+                            <span>NSFW</span>
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        {post.author_id !== user?.id && (
+                          <FollowButton
+                            userId={post.author_id}
+                            userName={post.profiles?.full_name || 'Anonymous'}
+                            variant="outline"
+                            size="sm"
+                            showIcon={false}
+                          />
+                        )}
+                        {/* Post actions menu */}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              aria-label="Post actions"
+                              className="text-white/60 hover:text-white p-1 rounded hover:bg-white/10"
+                            >
+                              <MoreHorizontal className="h-5 w-5" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="bg-charcoal border-gold/20">
+                            <DropdownMenuItem
+                              className="text-white/80 focus:text-white"
+                              onClick={() => {
+                                setSelectedPostForReport(post);
+                              }}
+                            >
+                              <Flag className="h-4 w-4 mr-2" /> Report
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-white/80 focus:text-white"
+                              onClick={async () => {
+                                const shareUrl = `${window.location.origin}/post/${post.id}`;
+                                try {
+                                  await navigator.clipboard.writeText(shareUrl);
+                                  toast({ title: "Link Copied", description: "Post link copied to clipboard." });
+                                } catch (e) {
+                                  console.error(e);
+                                }
+                              }}
+                            >
+                              <LinkIcon className="h-4 w-4 mr-2" /> Copy link
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </div>
                     <div className="flex items-center space-x-2 text-white/60 text-sm">
                       <span>{formatDate(post.created_at)}</span>
@@ -251,6 +468,12 @@ const Feed = () => {
                         src={post.image_url} 
                         alt="Post content" 
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.currentTarget as HTMLImageElement;
+                          if (target.src !== '/placeholder.svg') {
+                            target.src = '/placeholder.svg';
+                          }
+                        }}
                       />
                     </NSFWBlurOverlay>
                   </div>
@@ -259,12 +482,13 @@ const Feed = () => {
                 <div className="px-6">
                   {/* Post Interactions */}
                   <PostInteractions
-                    likes={post.likes}
-                    comments={post.comments}
-                    onLike={() => console.log('Liked post:', post.id)}
+                    postId={post.id}
+                    authorId={post.author_id}
+                    initialLikes={post.likes}
+                    initialComments={post.comments}
                     onComment={() => console.log('Comment on post:', post.id)}
-                    onShare={() => console.log('Shared post:', post.id)}
-                    onBookmark={() => console.log('Bookmarked post:', post.id)}
+                    onShare={() => handleShare(post)}
+                    onReport={() => setSelectedPostForReport(post)}
                   />
 
                   {/* Post Caption */}
@@ -293,6 +517,22 @@ const Feed = () => {
           ))
         )}
       </div>
+
+
+      {/* Report Modal */}
+      {selectedPostForReport && (
+        <ReportModal
+          forceOpen
+          reportedPostId={selectedPostForReport.id}
+          reportedUserId={selectedPostForReport.author_id}
+          onOpenChange={(open) => {
+            if (!open) setSelectedPostForReport(null);
+          }}
+          onReportSubmitted={() => {
+            setSelectedPostForReport(null);
+          }}
+        />
+      )}
     </div>
   );
 };

@@ -1,43 +1,172 @@
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Heart, MessageCircle, Share2, Bookmark } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Heart, MessageCircle, Share2, Bookmark, Flag } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
+import ReportModalEnhanced from "./ReportModalEnhanced";
 
 interface PostInteractionsProps {
-  likes: number;
-  comments: number;
-  isLiked?: boolean;
-  isBookmarked?: boolean;
-  onLike?: () => void;
-  onComment?: () => void;
-  onShare?: () => void;
-  onBookmark?: () => void;
+  postId: string;
+  authorId: string;
+  initialLikes: number;
+  initialComments: number;
+  onComment: () => void;
+  onShare: () => void;
+  onReport?: () => void;
 }
 
-const PostInteractions = ({
-  likes,
-  comments,
-  isLiked = false,
-  isBookmarked = false,
-  onLike,
-  onComment,
+const PostInteractions = ({ 
+  postId,
+  authorId,
+  initialLikes, 
+  initialComments, 
+  onComment, 
   onShare,
-  onBookmark
+  onReport
 }: PostInteractionsProps) => {
-  const [liked, setLiked] = useState(isLiked);
-  const [bookmarked, setBookmarked] = useState(isBookmarked);
-  const [likeCount, setLikeCount] = useState(likes);
+  const [isLiked, setIsLiked] = useState(false);
+  const [isBookmarked, setIsBookmarked] = useState(false);
+  const [likeCount, setLikeCount] = useState(initialLikes);
+  const [commentCount, setCommentCount] = useState(initialComments);
+  const [loading, setLoading] = useState(false);
+  const { user, profile, subscribed } = useAuth();
+  const { toast } = useToast();
 
-  const handleLike = () => {
-    setLiked(!liked);
-    setLikeCount(prev => liked ? prev - 1 : prev + 1);
-    onLike?.();
+  // Check if user has liked or bookmarked this post
+  useEffect(() => {
+    if (!user) return;
+
+    const checkUserInteractions = async () => {
+      try {
+        // Check if user liked this post
+        const { data: likeData } = await supabase
+          .from('likes')
+          .select('id')
+          .eq('post_id', postId)
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        setIsLiked(!!likeData);
+
+        // Check if user bookmarked this post
+        const { data: bookmarkData } = await supabase
+          .from('bookmarks')
+          .select('id')
+          .eq('post_id', postId)
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        setIsBookmarked(!!bookmarkData);
+      } catch (error) {
+        console.error('Error checking user interactions:', error);
+      }
+    };
+
+    checkUserInteractions();
+  }, [user, postId]);
+
+  const handleLike = async () => {
+    if (!user || !subscribed) {
+      toast({
+        title: "Subscription Required",
+        description: "You need an active subscription to interact with posts.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (loading) return;
+    setLoading(true);
+
+    try {
+      if (isLiked) {
+        // Unlike the post
+        const { error } = await supabase
+          .from('likes')
+          .delete()
+          .eq('post_id', postId)
+          .eq('user_id', user.id);
+
+        if (error) throw error;
+
+        setIsLiked(false);
+        setLikeCount(prev => Math.max(0, prev - 1));
+      } else {
+        // Like the post
+        const { error } = await supabase
+          .from('likes')
+          .insert({
+            post_id: postId,
+            user_id: user.id
+          });
+
+        if (error) throw error;
+
+        setIsLiked(true);
+        setLikeCount(prev => prev + 1);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update like.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleBookmark = () => {
-    setBookmarked(!bookmarked);
-    onBookmark?.();
+  const handleBookmark = async () => {
+    if (!user || !subscribed) {
+      toast({
+        title: "Subscription Required",
+        description: "You need an active subscription to bookmark posts.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (loading) return;
+    setLoading(true);
+
+    try {
+      if (isBookmarked) {
+        // Remove bookmark
+        const { error } = await supabase
+          .from('bookmarks')
+          .delete()
+          .eq('post_id', postId)
+          .eq('user_id', user.id);
+
+        if (error) throw error;
+
+        setIsBookmarked(false);
+      } else {
+        // Add bookmark
+        const { error } = await supabase
+          .from('bookmarks')
+          .insert({
+            post_id: postId,
+            user_id: user.id
+          });
+
+        if (error) throw error;
+
+        setIsBookmarked(true);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update bookmark.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
+
 
   const formatCount = (count: number): string => {
     if (count >= 1000000) {
@@ -57,13 +186,15 @@ const PostInteractions = ({
             variant="ghost"
             size="sm"
             onClick={handleLike}
+            disabled={loading || !subscribed}
             className={cn(
               "p-0 h-auto hover:bg-transparent",
-              liked ? "text-red-500" : "text-white/60 hover:text-red-400"
+              isLiked ? "text-red-500" : "text-white/60 hover:text-red-400",
+              !subscribed && "opacity-50"
             )}
           >
             <Heart 
-              className={cn("h-6 w-6", liked && "fill-current")} 
+              className={cn("h-6 w-6", isLiked && "fill-current")} 
             />
           </Button>
           
@@ -71,7 +202,11 @@ const PostInteractions = ({
             variant="ghost"
             size="sm"
             onClick={onComment}
-            className="p-0 h-auto text-white/60 hover:text-white hover:bg-transparent"
+            disabled={!subscribed}
+            className={cn(
+              "p-0 h-auto text-white/60 hover:text-white hover:bg-transparent",
+              !subscribed && "opacity-50"
+            )}
           >
             <MessageCircle className="h-6 w-6" />
           </Button>
@@ -86,19 +221,38 @@ const PostInteractions = ({
           </Button>
         </div>
         
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleBookmark}
-          className={cn(
-            "p-0 h-auto hover:bg-transparent",
-            bookmarked ? "text-gold" : "text-white/60 hover:text-gold"
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleBookmark}
+            disabled={loading || !subscribed}
+            className={cn(
+              "p-0 h-auto hover:bg-transparent",
+              isBookmarked ? "text-gold" : "text-white/60 hover:text-gold",
+              !subscribed && "opacity-50"
+            )}
+          >
+            <Bookmark 
+              className={cn("h-6 w-6", isBookmarked && "fill-current")} 
+            />
+          </Button>
+
+          {user && user.id !== authorId && (
+            <ReportModalEnhanced
+              reportedPostId={postId}
+              reportedUserId={authorId}
+            >
+              <Button
+                variant="ghost"
+                size="sm"
+                className="p-0 h-auto text-white/50 hover:text-red-400"
+              >
+                <Flag className="h-4 w-4" />
+              </Button>
+            </ReportModalEnhanced>
           )}
-        >
-          <Bookmark 
-            className={cn("h-6 w-6", bookmarked && "fill-current")} 
-          />
-        </Button>
+        </div>
       </div>
 
       {/* Like Count */}
@@ -109,13 +263,17 @@ const PostInteractions = ({
       )}
 
       {/* Comment Count */}
-      {comments > 0 && (
+      {commentCount > 0 && (
         <Button
           variant="ghost"
           onClick={onComment}
-          className="p-0 h-auto text-white/60 hover:text-white hover:bg-transparent text-sm"
+          disabled={!subscribed}
+          className={cn(
+            "p-0 h-auto text-white/60 hover:text-white hover:bg-transparent text-sm",
+            !subscribed && "opacity-50"
+          )}
         >
-          View {comments > 1 ? `all ${formatCount(comments)} comments` : '1 comment'}
+          View {commentCount > 1 ? `all ${formatCount(commentCount)} comments` : '1 comment'}
         </Button>
       )}
     </div>

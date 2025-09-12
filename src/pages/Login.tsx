@@ -10,15 +10,20 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const { signIn, user } = useAuth();
+  const { signIn, user, subscribed } = useAuth();
   const navigate = useNavigate();
 
   // Redirect if already logged in
   useEffect(() => {
     if (user) {
-      navigate("/portal");
+      // Check if user is subscribed or has trial access
+      if (subscribed) {
+        navigate("/portal");
+      } else {
+        navigate("/membership");
+      }
     }
-  }, [user, navigate]);
+  }, [user, subscribed, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,7 +31,7 @@ const Login = () => {
     
     try {
       await signIn(email, password);
-      navigate("/portal");
+      // Don't navigate here - let the useEffect handle it when user state updates
     } catch (error) {
       console.error("Login failed:", error);
     } finally {

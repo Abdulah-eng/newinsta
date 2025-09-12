@@ -1,23 +1,37 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import echelonHall from "@/assets/echelon-hall.jpg";
-import echelonLogo from "@/assets/echelon-logo-new.png";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 const Hero = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const { user, subscribed, startTrial } = useAuth();
+  const navigate = useNavigate();
   
   const slides = [
     {
-      image: echelonHall,
-      alt: "Echelon Texas Main Hall"
+      image: "/main.png",
+      alt: "Echelon TX Main"
     },
     {
-      image: echelonLogo,
-      alt: "Echelon Texas Logo",
-      isLogo: true
+      image: "/pool.png",
+      alt: "Echelon TX Pool"
+    },
+    {
+      image: "/e1.png",
+      alt: "Echelon TX Exclusive"
     }
   ];
+
+  // Simple auto-advance effect - completely independent
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % slides.length);
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, []); // Empty dependency array - runs only once on mount
 
   const nextSlide = () => {
     setCurrentSlide((prev) => (prev + 1) % slides.length);
@@ -25,6 +39,20 @@ const Hero = () => {
 
   const prevSlide = () => {
     setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
+  };
+
+  const handleTrialClick = async () => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    
+    if (subscribed) {
+      navigate('/portal');
+      return;
+    }
+    
+    await startTrial();
   };
 
   return (
@@ -39,24 +67,10 @@ const Hero = () => {
             }`}
           >
             <div
-              className={`w-full h-full bg-cover bg-center ${
-                slide.isLogo ? "bg-black flex items-center justify-center" : ""
-              }`}
-              style={
-                slide.isLogo
-                  ? {}
-                  : { backgroundImage: `url(${slide.image})` }
-              }
-            >
-              {slide.isLogo && (
-                <img
-                  src={slide.image}
-                  alt={slide.alt}
-                  className="max-w-xs h-auto opacity-90"
-                />
-              )}
-            </div>
-            <div className="absolute inset-0 bg-black/50" />
+              className="w-full h-full bg-cover bg-center bg-no-repeat"
+              style={{ backgroundImage: `url(${slide.image})` }}
+            />
+            <div className="absolute inset-0 bg-black/40" />
           </div>
         ))}
       </div>
@@ -75,35 +89,24 @@ const Hero = () => {
         <ChevronRight size={32} />
       </button>
 
-      {/* Slide Indicators */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex space-x-3 z-10">
-        {slides.map((_, index) => (
-          <button
-            key={index}
-            onClick={() => setCurrentSlide(index)}
-            className={`w-3 h-3 rounded-full transition-colors ${
-              index === currentSlide ? "bg-gold" : "bg-white/50"
-            }`}
-          />
-        ))}
-      </div>
 
       {/* Content Overlay */}
       <div className="absolute inset-0 flex items-center justify-center z-10">
         <div className="text-center max-w-4xl px-6">
           <h1 className="text-5xl md:text-7xl font-serif text-white mb-6 tracking-wide">
             Welcome to{" "}
-            <span className="text-gold font-bold">Echelon Texas</span>
+            <span className="text-gold font-bold">Echelon TX</span>
           </h1>
           <p className="text-xl md:text-2xl text-white/90 mb-8 max-w-2xl mx-auto leading-relaxed">
             An exclusive private members club where luxury meets community. 
             Experience the finest in hospitality, networking, and lifestyle.
           </p>
           <Button 
+            onClick={handleTrialClick}
             size="lg" 
             className="text-lg px-8 py-6 bg-gold hover:bg-gold-light text-black font-semibold transition-all hover:scale-105"
           >
-            Join Echelon TX – $20/month
+            Start 3-Day Free Trial – $20/month
           </Button>
         </div>
       </div>

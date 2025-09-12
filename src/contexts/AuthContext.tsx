@@ -9,12 +9,26 @@ interface Profile {
   full_name: string | null
   bio: string | null
   avatar_url: string | null
+  handle: string | null
   membership_tier: 'basic' | 'premium' | 'elite' | null
   is_admin: boolean
+  is_banned: boolean
+  ban_reason: string | null
+  age_verified: boolean
+  safe_mode_enabled: boolean
+  last_active: string | null
+  is_moderator: boolean
+  is_super_admin: boolean
+  messaging_enabled: boolean
+  story_privacy: 'public' | 'followers' | 'close_friends'
+  last_seen: string | null
   created_at: string
   updated_at: string
-  age_verified?: boolean
-  safe_mode_enabled?: boolean
+  sdc_username?: string | null
+  mutual_profile?: string | null
+  fb_profile?: string | null
+  trial_started_at?: string | null
+  trial_ended_at?: string | null
 }
 
 interface AuthContextType {
@@ -26,6 +40,8 @@ interface AuthContextType {
   subscriptionTier: string | null
   subscriptionEnd: string | null
   subscriptionLoading: boolean
+  isTrialActive: boolean
+  trialDaysRemaining: number
   signUp: (email: string, password: string, fullName: string) => Promise<void>
   signIn: (email: string, password: string) => Promise<void>
   signOut: () => Promise<void>
@@ -33,6 +49,7 @@ interface AuthContextType {
   checkSubscription: () => Promise<void>
   createCheckout: () => Promise<void>
   manageSubscription: () => Promise<void>
+  startTrial: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -54,6 +71,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [subscriptionTier, setSubscriptionTier] = useState<string | null>(null)
   const [subscriptionEnd, setSubscriptionEnd] = useState<string | null>(null)
   const [subscriptionLoading, setSubscriptionLoading] = useState(false)
+  const [isTrialActive, setIsTrialActive] = useState(false)
+  const [trialDaysRemaining, setTrialDaysRemaining] = useState(0)
   const { toast } = useToast()
 
   const getProfile = async (userId: string) => {
@@ -110,12 +129,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
       if (error) throw error
+
+      // Update state immediately after successful login
+      if (data.user) {
+        setUser(data.user);
+        setSession(data.session);
+        setLoading(false);
+        
+        // Fetch profile
+        const profile = await getProfile(data.user.id);
+        setProfile(profile);
+        
+        // Check subscription status
+        setTimeout(() => {
+          checkSubscription();
+        }, 100);
+      }
 
       toast({
         title: "Welcome back!",
@@ -133,27 +168,45 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut()
-      if (error) throw error
-
+      console.log('Signing out...');
+      
+      // Clear state immediately to prevent UI issues
       setUser(null)
       setProfile(null)
       setSession(null)
       setSubscribed(false)
       setSubscriptionTier(null)
       setSubscriptionEnd(null)
+      setLoading(false)
 
+      // Then sign out from Supabase
+      const { error } = await supabase.auth.signOut()
+      if (error) {
+        console.error('Sign out error:', error);
+        // Don't throw error here, just log it since we've already cleared state
+        console.warn('Supabase sign out failed, but local state cleared');
+      }
+
+      console.log('Sign out completed');
       toast({
         title: "Signed out",
         description: "You've been signed out successfully.",
       })
     } catch (error: any) {
+      console.error('Error in signOut:', error);
+      // Even if there's an error, clear the state
+      setUser(null)
+      setProfile(null)
+      setSession(null)
+      setSubscribed(false)
+      setSubscriptionTier(null)
+      setSubscriptionEnd(null)
+      setLoading(false)
+      
       toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
+        title: "Signed out",
+        description: "You've been signed out successfully.",
       })
-      throw error
     }
   }
 
@@ -162,30 +215,107 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setSubscribed(false);
       setSubscriptionTier(null);
       setSubscriptionEnd(null);
+      setIsTrialActive(false);
+      setTrialDaysRemaining(0);
       return;
     }
 
     try {
       setSubscriptionLoading(true);
+      
+      // Check if user has an active trial
+      if (profile?.trial_started_at && !profile?.trial_ended_at) {
+        const trialStart = new Date(profile.trial_started_at);
+        const trialEnd = new Date(trialStart.getTime() + (3 * 24 * 60 * 60 * 1000)); // 3 days
+        const now = new Date();
+        
+        if (now < trialEnd) {
+          // Trial is still active
+          setIsTrialActive(true);
+          setTrialDaysRemaining(Math.ceil((trialEnd.getTime() - now.getTime()) / (24 * 60 * 60 * 1000)));
+          setSubscribed(true); // Give full access during trial
+          setSubscriptionTier('trial');
+          setSubscriptionEnd(trialEnd.toISOString());
+          return;
+        } else {
+          // Trial has expired, end it
+          await supabase
+            .from('profiles')
+            .update({ trial_ended_at: now.toISOString() })
+            .eq('id', profile.id);
+        }
+      }
+
+      // Check regular subscription
       const { data, error } = await supabase.functions.invoke('check-subscription', {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Subscription check error:', error);
+        throw error;
+      }
 
       setSubscribed(data.subscribed || false);
       setSubscriptionTier(data.subscription_tier || null);
       setSubscriptionEnd(data.subscription_end || null);
+      setIsTrialActive(false);
+      setTrialDaysRemaining(0);
     } catch (error: any) {
       console.error('Error checking subscription:', error);
       // Set defaults on error
       setSubscribed(false);
       setSubscriptionTier(null);
       setSubscriptionEnd(null);
+      setIsTrialActive(false);
+      setTrialDaysRemaining(0);
     } finally {
       setSubscriptionLoading(false);
+    }
+  };
+
+  const startTrial = async () => {
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "Please log in to start your trial.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const now = new Date().toISOString();
+      
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          trial_started_at: now,
+          trial_ended_at: null 
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setIsTrialActive(true);
+      setTrialDaysRemaining(3);
+      setSubscribed(true);
+      setSubscriptionTier('trial');
+      setSubscriptionEnd(new Date(Date.now() + (3 * 24 * 60 * 60 * 1000)).toISOString());
+
+      toast({
+        title: "Trial Started!",
+        description: "Your 3-day free trial has begun. Enjoy full access to Echelon TX!",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to start trial.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -200,14 +330,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
 
     try {
+      console.log('Creating checkout session...');
+      console.log('Session access token:', session.access_token ? 'Present' : 'Missing');
+      
       const { data, error } = await supabase.functions.invoke('create-checkout', {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
       })
 
-      if (error) throw error
+      console.log('Function response:', { data, error });
 
+      if (error) {
+        console.error('Checkout creation error:', error);
+        throw error;
+      }
+
+      if (!data?.url) {
+        console.error('No checkout URL in response:', data);
+        throw new Error('No checkout URL received');
+      }
+
+      console.log('Opening checkout URL:', data.url);
       // Open Stripe checkout in a new tab
       window.open(data.url, '_blank')
 
@@ -216,11 +360,42 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         description: "Opening Stripe checkout in a new tab.",
       })
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create checkout session.",
-        variant: "destructive",
-      })
+      console.error('Error in createCheckout:', error);
+      
+      // Check if it's a function not found error
+      if (error.message?.includes('Function not found') || error.message?.includes('404')) {
+        toast({
+          title: "Setup Required",
+          description: "Stripe integration not configured. Please deploy the Supabase Edge Functions.",
+          variant: "destructive",
+        })
+        
+        // Show setup instructions
+        setTimeout(() => {
+          alert(`To enable Stripe checkout, you need to:
+
+1. Install Supabase CLI: npm install -g supabase
+2. Login: supabase login
+3. Link project: supabase link --project-ref khmytjiytpgpkccwncvj
+4. Set environment variables in Supabase Dashboard
+5. Deploy functions: supabase functions deploy
+
+See deploy-functions.md for detailed instructions.`);
+        }, 1000);
+        
+      } else if (error.message?.includes('STRIPE_SECRET_KEY')) {
+        toast({
+          title: "Configuration Error",
+          description: "Stripe secret key not configured in Supabase Edge Functions.",
+          variant: "destructive",
+        })
+      } else {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to create checkout session.",
+          variant: "destructive",
+        })
+      }
     }
   }
 
@@ -288,37 +463,104 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     let mounted = true;
+    let isInitialized = false;
+    let initTimeout: NodeJS.Timeout | null = null;
+    
+    const completeInitialization = () => {
+      if (!isInitialized && mounted) {
+        isInitialized = true;
+        if (initTimeout) {
+          clearTimeout(initTimeout);
+          initTimeout = null;
+        }
+        console.log('Auth initialization complete');
+        setLoading(false);
+      }
+    };
     
     const initializeAuth = async () => {
       try {
+        console.log('Initializing auth...');
+        
+        // Add a timeout to prevent infinite loading
+        initTimeout = setTimeout(() => {
+          if (mounted && !isInitialized) {
+            console.warn('Auth initialization timeout, forcing completion');
+            completeInitialization();
+          }
+        }, 10000); // 10 second timeout
+        
         const { data: { session } } = await supabase.auth.getSession();
         
-        if (!mounted) return;
+        if (!mounted) {
+          if (initTimeout) {
+            clearTimeout(initTimeout);
+            initTimeout = null;
+          }
+          return;
+        }
         
+        console.log('Session found:', session ? 'Yes' : 'No');
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          const profile = await getProfile(session.user.id);
-          if (!mounted) return;
-          setProfile(profile);
-          
-          // Check subscription status
-          checkSubscription();
+          console.log('User found, fetching profile...');
+          try {
+            const profile = await getProfile(session.user.id);
+            if (!mounted) {
+              if (initTimeout) {
+                clearTimeout(initTimeout);
+                initTimeout = null;
+              }
+              return;
+            }
+            setProfile(profile);
+            
+            // Check subscription status asynchronously without blocking loading
+            setTimeout(() => {
+              if (mounted) {
+                checkSubscription();
+              }
+            }, 100);
+          } catch (profileError) {
+            console.error('Error fetching profile:', profileError);
+            // If profile fetch fails, it might be due to invalid session
+            if (profileError.message?.includes('JWT') || profileError.message?.includes('token')) {
+              console.log('Invalid session detected, clearing auth state');
+              setSession(null);
+              setUser(null);
+              setProfile(null);
+              setSubscribed(false);
+              setSubscriptionTier(null);
+              setSubscriptionEnd(null);
+            }
+            // Continue with initialization even if profile fetch fails
+          }
+        } else {
+          console.log('No user found');
+          setProfile(null);
+          setSubscribed(false);
+          setSubscriptionTier(null);
+          setSubscriptionEnd(null);
         }
+        
+        // Complete initialization
+        completeInitialization();
       } catch (error) {
         console.error('AuthContext: Error initializing auth:', error);
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
+        completeInitialization();
       }
     };
 
     initializeAuth();
 
     return () => { 
-      mounted = false; 
+      mounted = false;
+      if (initTimeout) {
+        clearTimeout(initTimeout);
+        initTimeout = null;
+      }
     };
   }, []);
 
@@ -326,10 +568,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state change:', event, session ? 'Session exists' : 'No session');
+        
+        // Don't process initial session event as it's handled by initializeAuth
+        if (event === 'INITIAL_SESSION') {
+          console.log('Skipping initial session event');
+          return;
+        }
+        
+        // For SIGNED_IN events during initialization, let initializeAuth handle it
+        if (event === 'SIGNED_IN' && loading) {
+          console.log('Skipping SIGNED_IN event during initialization');
+          return;
+        }
+        
         setSession(session)
         setUser(session?.user ?? null)
         
         if (session?.user) {
+          console.log('Processing login event, fetching profile...');
           const profile = await getProfile(session.user.id)
           setProfile(profile)
           // Check subscription status when user logs in
@@ -337,6 +594,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             checkSubscription()
           }, 100)
         } else {
+          console.log('Processing logout event, clearing state...');
           setProfile(null)
           setSubscribed(false)
           setSubscriptionTier(null)
@@ -357,6 +615,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     subscriptionTier,
     subscriptionEnd,
     subscriptionLoading,
+    isTrialActive,
+    trialDaysRemaining,
     signUp,
     signIn,
     signOut,
@@ -364,6 +624,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     checkSubscription,
     createCheckout,
     manageSubscription,
+    startTrial,
   }
 
   return (

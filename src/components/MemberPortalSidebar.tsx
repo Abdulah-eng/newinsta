@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { User, Home, FileText, Settings, Shield, LogOut, Plus, Crown } from "lucide-react";
+import { User, Home, FileText, Settings, Shield, LogOut, Plus, Crown, MessageCircle, Camera } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -16,9 +16,12 @@ import { useAuth } from "@/contexts/AuthContext";
 const memberItems = [
   { title: "Feed", url: "/portal", icon: Home },
   { title: "Create Post", url: "/portal/create", icon: Plus },
+  { title: "Create Story", url: "/portal/create-story", icon: Camera },
+  { title: "Messages", url: "/portal/messages", icon: MessageCircle },
   { title: "My Profile", url: "/portal/profile", icon: User },
-  { title: "Documents", url: "/portal/documents", icon: FileText },
-  { title: "Test Environment", url: "/portal/test", icon: Settings },
+  // Hidden: Documents and Test Environment per request
+  // { title: "Documents", url: "/portal/documents", icon: FileText },
+  // { title: "Test Environment", url: "/portal/test", icon: Settings },
 ];
 
 const adminItems = [
@@ -40,7 +43,7 @@ export function MemberPortalSidebar() {
   };
 
   const getNavClass = ({ isActive }: { isActive: boolean }) =>
-    isActive ? "bg-gold/20 text-gold" : "text-white/80 hover:text-gold hover:bg-gold/10";
+    isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent";
 
   const handleLogout = async () => {
     try {

@@ -1,13 +1,12 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Upload } from "lucide-react";
 
@@ -23,6 +22,11 @@ const CreatePost = ({ onPostCreated }: { onPostCreated?: () => void }) => {
     if (e.target.files && e.target.files[0]) {
       setImage(e.target.files[0]);
     }
+  };
+
+  const handleNsfwChange = (checked: boolean) => {
+    console.log('NSFW toggle clicked:', checked);
+    setIsNsfw(checked);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -146,21 +150,22 @@ const CreatePost = ({ onPostCreated }: { onPostCreated?: () => void }) => {
             </Button>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="content" className="text-white">Content</Label>
+              <Label htmlFor="content" className="text-white font-medium">Content</Label>
               <Textarea
                 id="content"
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 placeholder="What's on your mind?"
-                className="bg-black border-gold/30 text-white focus:border-gold min-h-[100px]"
+                className="bg-black border-gold/30 text-white focus:border-gold min-h-[120px] resize-none"
                 rows={4}
+                required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="image-upload" className="text-white">Image (Optional)</Label>
+              <Label htmlFor="image-upload" className="text-white font-medium">Image (Optional)</Label>
               <div className="flex items-center space-x-2">
                 <Input
                   id="image-upload"
@@ -176,14 +181,17 @@ const CreatePost = ({ onPostCreated }: { onPostCreated?: () => void }) => {
               )}
             </div>
 
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-3">
               <Checkbox 
                 id="nsfw" 
                 checked={isNsfw}
-                onCheckedChange={(checked) => setIsNsfw(checked === true)}
-                className="border-gold/30 data-[state=checked]:bg-gold data-[state=checked]:text-black"
+                onCheckedChange={handleNsfwChange}
+                className="border-gold/30 data-[state=checked]:bg-gold data-[state=checked]:text-black data-[state=checked]:border-gold"
               />
-              <Label htmlFor="nsfw" className="text-white text-sm">
+              <Label 
+                htmlFor="nsfw" 
+                className="text-white text-sm cursor-pointer select-none"
+              >
                 Mark as NSFW (Not Safe For Work)
               </Label>
             </div>
@@ -191,7 +199,7 @@ const CreatePost = ({ onPostCreated }: { onPostCreated?: () => void }) => {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full bg-gold hover:bg-gold-light text-black font-semibold disabled:opacity-50"
+              className="w-full bg-gold hover:bg-gold-light text-black font-semibold disabled:opacity-50 py-3 text-lg transition-all duration-200"
             >
               {loading ? "Creating Post..." : "Create Post"}
             </Button>
