@@ -4,7 +4,7 @@
 -- =============================================
 -- 1. DROP EXISTING POLICIES (to avoid conflicts)
 -- =============================================
-
+-- ADMIN_DATABASE_FIXED.sql
 -- Drop existing policies on reports table
 DROP POLICY IF EXISTS "Users can create reports" ON public.reports;
 DROP POLICY IF EXISTS "Users can view own reports" ON public.reports;
