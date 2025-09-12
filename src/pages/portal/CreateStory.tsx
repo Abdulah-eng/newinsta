@@ -135,17 +135,17 @@ const CreateStory: React.FC = () => {
   const isImage = selectedFile?.type.startsWith('image/');
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-black">
       <div className="max-w-2xl mx-auto p-6">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">Create Story</h1>
-          <p className="text-gray-600">Share a moment that disappears in 24 hours</p>
+          <h1 className="text-3xl font-bold text-gold font-serif">Create Story</h1>
+          <p className="text-white/70">Share a moment that disappears in 24 hours</p>
         </div>
 
-        <Card>
+        <Card className="bg-charcoal border-gold/20">
           <CardHeader>
-            <CardTitle>New Story</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-gold font-serif">New Story</CardTitle>
+            <CardDescription className="text-white/70">
               Your story will be visible to other members for 24 hours
             </CardDescription>
           </CardHeader>
@@ -159,8 +159,8 @@ const CreateStory: React.FC = () => {
 
             {/* File Upload */}
             <div className="space-y-4">
-              <Label>Add Media (Optional)</Label>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+              <Label className="text-white">Add Media (Optional)</Label>
+              <div className="border-2 border-dashed border-gold/30 rounded-lg p-6 text-center hover:border-gold/50 transition-colors bg-black/20">
                 {previewUrl ? (
                   <div className="space-y-4">
                     {isImage && (
@@ -198,7 +198,7 @@ const CreateStory: React.FC = () => {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    <div className="text-gray-400">
+                    <div className="text-gold/60">
                       {isVideo ? (
                         <Video className="h-12 w-12 mx-auto" />
                       ) : (
@@ -209,12 +209,13 @@ const CreateStory: React.FC = () => {
                       <Button
                         variant="outline"
                         onClick={() => fileInputRef.current?.click()}
+                        className="border-gold/50 text-gold hover:bg-gold/20"
                       >
                         <Upload className="h-4 w-4 mr-2" />
                         Upload Image or Video
                       </Button>
                     </div>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-white/60">
                       Supports JPEG, PNG, GIF, MP4 up to 50MB
                     </p>
                   </div>
@@ -231,7 +232,7 @@ const CreateStory: React.FC = () => {
 
             {/* Content */}
             <div className="space-y-2">
-              <Label htmlFor="content">Story Content</Label>
+              <Label htmlFor="content" className="text-white">Story Content</Label>
               <Textarea
                 id="content"
                 placeholder="What's happening? Share your moment..."
@@ -239,8 +240,9 @@ const CreateStory: React.FC = () => {
                 onChange={(e) => setContent(e.target.value)}
                 rows={4}
                 maxLength={500}
+                className="bg-black border-gold/30 text-white focus:border-gold"
               />
-              <div className="text-right text-sm text-gray-500">
+              <div className="text-right text-sm text-white/60">
                 {content.length}/500 characters
               </div>
             </div>
@@ -252,8 +254,8 @@ const CreateStory: React.FC = () => {
                 checked={isNsfw}
                 onCheckedChange={setIsNsfw}
               />
-              <Label htmlFor="nsfw" className="text-sm">
-                Mark as NSFW (18+ content)
+              <Label htmlFor="nsfw" className="text-sm text-white">
+                Mark NSFW content appropriately
               </Label>
             </div>
 
@@ -282,12 +284,14 @@ const CreateStory: React.FC = () => {
                     fileInputRef.current.value = '';
                   }
                 }}
+                className="border-gold/50 text-gold hover:bg-gold/20"
               >
                 Clear
               </Button>
               <Button
                 onClick={handleSubmit}
                 disabled={isUploading || isLoading || (!content.trim() && !selectedFile)}
+                className="bg-gold hover:bg-gold-light text-black font-semibold"
               >
                 {isUploading ? 'Creating...' : 'Create Story'}
               </Button>
@@ -296,18 +300,14 @@ const CreateStory: React.FC = () => {
         </Card>
 
         {/* Story Guidelines */}
-        <Card className="mt-6">
+        <Card className="mt-6 bg-charcoal border-gold/20">
           <CardHeader>
-            <CardTitle className="text-lg">Story Guidelines</CardTitle>
+            <CardTitle className="text-lg text-gold font-serif">Story Guidelines</CardTitle>
           </CardHeader>
           <CardContent>
-            <ul className="space-y-2 text-sm text-gray-600">
-              <li>• Stories are visible for 24 hours and then automatically deleted</li>
-              <li>• Keep content appropriate and respectful</li>
-              <li>• Mark NSFW content appropriately</li>
-              <li>• Don't share personal information</li>
-              <li>• Respect other members' privacy</li>
-            </ul>
+            <p className="text-sm text-white/70">
+              Mark NSFW content appropriately
+            </p>
           </CardContent>
         </Card>
       </div>

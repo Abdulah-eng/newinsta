@@ -28,7 +28,7 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   const [ageVerified, setAgeVerified] = useState(false);
   const [safeModeEnabled, setSafeModeEnabled] = useState(true);
-  const { user, profile, subscribed, subscriptionTier, checkSubscription } = useAuth();
+  const { user, profile, subscribed, subscriptionTier, checkSubscription, isTrialActive, trialDaysRemaining, startTrial } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -147,6 +147,7 @@ const Profile = () => {
 
   const getMembershipLevel = () => {
     if (!subscribed) return "Free Member";
+    if (isTrialActive) return `Trial Member (${trialDaysRemaining} days left)`;
     return subscriptionTier === "premium" ? "Premium Member" : "Elite Member";
   };
 
@@ -261,14 +262,49 @@ const Profile = () => {
 
               <div className="text-white/80">
                 <p className="mb-2">{profile?.bio || "No bio yet"}</p>
+                
+                {/* Social Media Profiles */}
+                {(profile?.sdc_username || profile?.mutual_profile || profile?.fb_profile) && (
+                  <div className="mb-4">
+                    <h4 className="text-gold font-semibold mb-2">Social Profiles</h4>
+                    <div className="space-y-1 text-sm">
+                      {profile?.sdc_username && (
+                        <div className="flex items-center space-x-2">
+                          <span className="text-white/60">SDC:</span>
+                          <span className="text-gold">@{profile.sdc_username}</span>
+                        </div>
+                      )}
+                      {profile?.mutual_profile && (
+                        <div className="flex items-center space-x-2">
+                          <span className="text-white/60">MUTUAL/S:</span>
+                          <span className="text-gold">@{profile.mutual_profile}</span>
+                        </div>
+                      )}
+                      {profile?.fb_profile && (
+                        <div className="flex items-center space-x-2">
+                          <span className="text-white/60">Facebook:</span>
+                          <span className="text-gold">{profile.fb_profile}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
                 <p className="text-white/60 text-sm">
                   Member since {profile?.created_at ? formatDate(profile.created_at) : "Recently"}
                 </p>
                 {!subscribed && (
-                  <div className="mt-4">
+                  <div className="mt-4 space-y-3">
+                    <Button 
+                      onClick={startTrial}
+                      className="bg-gold hover:bg-gold-light text-black font-semibold w-full"
+                    >
+                      Start 3-Day Free Trial
+                    </Button>
                     <Button 
                       onClick={() => window.location.href = '/membership'}
-                      className="bg-gold hover:bg-gold-light text-black font-semibold"
+                      variant="outline"
+                      className="border-gold/50 text-gold hover:bg-gold/20 w-full"
                     >
                       Subscribe for $20/month
                     </Button>

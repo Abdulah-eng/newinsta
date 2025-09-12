@@ -19,6 +19,9 @@ const EditProfileModal = ({ children, onProfileUpdated }: EditProfileModalProps)
   const [open, setOpen] = useState(false);
   const [fullName, setFullName] = useState("");
   const [bio, setBio] = useState("");
+  const [sdcUsername, setSdcUsername] = useState("");
+  const [mutualProfile, setMutualProfile] = useState("");
+  const [fbProfile, setFbProfile] = useState("");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -29,6 +32,9 @@ const EditProfileModal = ({ children, onProfileUpdated }: EditProfileModalProps)
     if (profile && open) {
       setFullName(profile.full_name || "");
       setBio(profile.bio || "");
+      setSdcUsername(profile.sdc_username || "");
+      setMutualProfile(profile.mutual_profile || "");
+      setFbProfile(profile.fb_profile || "");
       setAvatarPreview(profile.avatar_url || "");
     }
   }, [profile, open]);
@@ -89,6 +95,9 @@ const EditProfileModal = ({ children, onProfileUpdated }: EditProfileModalProps)
         full_name: fullName.trim(),
         bio: bio.trim(),
         avatar_url: avatarUrl,
+        sdc_username: sdcUsername.trim(),
+        mutual_profile: mutualProfile.trim(),
+        fb_profile: fbProfile.trim(),
       });
 
       setOpen(false);
@@ -184,6 +193,44 @@ const EditProfileModal = ({ children, onProfileUpdated }: EditProfileModalProps)
               maxLength={500}
             />
             <p className="text-white/50 text-xs">{bio.length}/500 characters</p>
+          </div>
+
+          {/* Social Media Usernames */}
+          <div className="space-y-4">
+            <Label className="text-gold font-semibold">Social Media Profiles</Label>
+            
+            <div className="space-y-2">
+              <Label htmlFor="sdcUsername" className="text-white">SDC Username</Label>
+              <Input
+                id="sdcUsername"
+                value={sdcUsername}
+                onChange={(e) => setSdcUsername(e.target.value)}
+                placeholder="Enter your SDC username"
+                className="bg-black border-gold/30 text-white focus:border-gold"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="mutualProfile" className="text-white">MUTUAL/S Profile Name</Label>
+              <Input
+                id="mutualProfile"
+                value={mutualProfile}
+                onChange={(e) => setMutualProfile(e.target.value)}
+                placeholder="Enter your MUTUAL/S profile name"
+                className="bg-black border-gold/30 text-white focus:border-gold"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="fbProfile" className="text-white">Facebook Profile</Label>
+              <Input
+                id="fbProfile"
+                value={fbProfile}
+                onChange={(e) => setFbProfile(e.target.value)}
+                placeholder="Enter your Facebook profile URL or username"
+                className="bg-black border-gold/30 text-white focus:border-gold"
+              />
+            </div>
           </div>
 
           {/* Actions */}

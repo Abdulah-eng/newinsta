@@ -43,7 +43,7 @@ export function MemberPortalSidebar() {
   };
 
   const getNavClass = ({ isActive }: { isActive: boolean }) =>
-    isActive ? "bg-gold/20 text-gold" : "text-white/80 hover:text-gold hover:bg-gold/10";
+    isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent";
 
   const handleLogout = async () => {
     try {

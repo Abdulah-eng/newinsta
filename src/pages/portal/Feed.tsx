@@ -263,7 +263,7 @@ const Feed = () => {
             <Button
               onClick={() => navigate('/portal/create')}
               variant="outline"
-              className="flex-1 justify-start text-left text-white/60 border-gold/30 hover:border-gold hover:text-gold"
+              className="flex-1 justify-start text-left text-gold border-gold hover:border-gold hover:text-gold"
             >
               What's on your mind?
             </Button>

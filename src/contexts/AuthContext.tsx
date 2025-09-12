@@ -24,6 +24,11 @@ interface Profile {
   last_seen: string | null
   created_at: string
   updated_at: string
+  sdc_username?: string | null
+  mutual_profile?: string | null
+  fb_profile?: string | null
+  trial_started_at?: string | null
+  trial_ended_at?: string | null
 }
 
 interface AuthContextType {
@@ -35,6 +40,8 @@ interface AuthContextType {
   subscriptionTier: string | null
   subscriptionEnd: string | null
   subscriptionLoading: boolean
+  isTrialActive: boolean
+  trialDaysRemaining: number
   signUp: (email: string, password: string, fullName: string) => Promise<void>
   signIn: (email: string, password: string) => Promise<void>
   signOut: () => Promise<void>
@@ -42,6 +49,7 @@ interface AuthContextType {
   checkSubscription: () => Promise<void>
   createCheckout: () => Promise<void>
   manageSubscription: () => Promise<void>
+  startTrial: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -63,6 +71,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [subscriptionTier, setSubscriptionTier] = useState<string | null>(null)
   const [subscriptionEnd, setSubscriptionEnd] = useState<string | null>(null)
   const [subscriptionLoading, setSubscriptionLoading] = useState(false)
+  const [isTrialActive, setIsTrialActive] = useState(false)
+  const [trialDaysRemaining, setTrialDaysRemaining] = useState(0)
   const { toast } = useToast()
 
   const getProfile = async (userId: string) => {
@@ -119,12 +129,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
       if (error) throw error
+
+      // Update state immediately after successful login
+      if (data.user) {
+        setUser(data.user);
+        setSession(data.session);
+        setLoading(false);
+        
+        // Fetch profile
+        const profile = await getProfile(data.user.id);
+        setProfile(profile);
+        
+        // Check subscription status
+        setTimeout(() => {
+          checkSubscription();
+        }, 100);
+      }
 
       toast({
         title: "Welcome back!",
@@ -189,11 +215,38 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setSubscribed(false);
       setSubscriptionTier(null);
       setSubscriptionEnd(null);
+      setIsTrialActive(false);
+      setTrialDaysRemaining(0);
       return;
     }
 
     try {
       setSubscriptionLoading(true);
+      
+      // Check if user has an active trial
+      if (profile?.trial_started_at && !profile?.trial_ended_at) {
+        const trialStart = new Date(profile.trial_started_at);
+        const trialEnd = new Date(trialStart.getTime() + (3 * 24 * 60 * 60 * 1000)); // 3 days
+        const now = new Date();
+        
+        if (now < trialEnd) {
+          // Trial is still active
+          setIsTrialActive(true);
+          setTrialDaysRemaining(Math.ceil((trialEnd.getTime() - now.getTime()) / (24 * 60 * 60 * 1000)));
+          setSubscribed(true); // Give full access during trial
+          setSubscriptionTier('trial');
+          setSubscriptionEnd(trialEnd.toISOString());
+          return;
+        } else {
+          // Trial has expired, end it
+          await supabase
+            .from('profiles')
+            .update({ trial_ended_at: now.toISOString() })
+            .eq('id', profile.id);
+        }
+      }
+
+      // Check regular subscription
       const { data, error } = await supabase.functions.invoke('check-subscription', {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
@@ -208,14 +261,61 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setSubscribed(data.subscribed || false);
       setSubscriptionTier(data.subscription_tier || null);
       setSubscriptionEnd(data.subscription_end || null);
+      setIsTrialActive(false);
+      setTrialDaysRemaining(0);
     } catch (error: any) {
       console.error('Error checking subscription:', error);
       // Set defaults on error
       setSubscribed(false);
       setSubscriptionTier(null);
       setSubscriptionEnd(null);
+      setIsTrialActive(false);
+      setTrialDaysRemaining(0);
     } finally {
       setSubscriptionLoading(false);
+    }
+  };
+
+  const startTrial = async () => {
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "Please log in to start your trial.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const now = new Date().toISOString();
+      
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          trial_started_at: now,
+          trial_ended_at: null 
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setIsTrialActive(true);
+      setTrialDaysRemaining(3);
+      setSubscribed(true);
+      setSubscriptionTier('trial');
+      setSubscriptionEnd(new Date(Date.now() + (3 * 24 * 60 * 60 * 1000)).toISOString());
+
+      toast({
+        title: "Trial Started!",
+        description: "Your 3-day free trial has begun. Enjoy full access to Echelon TX!",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to start trial.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -232,7 +332,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       console.log('Creating checkout session...');
       console.log('Session access token:', session.access_token ? 'Present' : 'Missing');
-      console.log('Supabase URL:', supabase.supabaseUrl);
       
       const { data, error } = await supabase.functions.invoke('create-checkout', {
         headers: {
@@ -516,6 +615,8 @@ See deploy-functions.md for detailed instructions.`);
     subscriptionTier,
     subscriptionEnd,
     subscriptionLoading,
+    isTrialActive,
+    trialDaysRemaining,
     signUp,
     signIn,
     signOut,
@@ -523,6 +624,7 @@ See deploy-functions.md for detailed instructions.`);
     checkSubscription,
     createCheckout,
     manageSubscription,
+    startTrial,
   }
 
   return (

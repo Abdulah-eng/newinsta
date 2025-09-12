@@ -58,7 +58,7 @@ export const FollowButton: React.FC<FollowButtonProps> = ({
       disabled={isLoading}
       variant={getButtonVariant()}
       size={size}
-      className={`${isCurrentlyFollowing ? 'text-gold border-gold hover:bg-gold hover:text-white' : 'bg-gold hover:bg-gold-dark text-white'} ${className}`}
+      className={`${isCurrentlyFollowing ? 'text-gold border-gold hover:bg-gold hover:text-white' : 'bg-gold hover:bg-gold-light text-black'} ${className}`}
     >
       {showIcon && getButtonIcon()}
       <span className={showIcon ? 'ml-2' : ''}>{getButtonText()}</span>

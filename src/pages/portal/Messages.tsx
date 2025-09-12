@@ -130,34 +130,34 @@ const Messages: React.FC = () => {
   // Removed loading screen for better UX
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-black">
       <div className="max-w-7xl mx-auto p-6">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">Messages</h1>
-          <p className="text-gray-600">Connect with other members</p>
+          <h1 className="text-3xl font-bold text-gold font-serif">Messages</h1>
+          <p className="text-white/70">Connect with other members</p>
         </div>
 
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-red-600">{error}</p>
+          <div className="mb-6 p-4 bg-red-900/20 border border-red-500/30 rounded-lg">
+            <p className="text-red-400">{error}</p>
           </div>
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-200px)]">
           {/* Users List */}
-          <Card className="lg:col-span-1">
+          <Card className="lg:col-span-1 bg-charcoal border-gold/20">
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>All Members</CardTitle>
-                <Badge variant="secondary">{allUsers.length} members</Badge>
+                <CardTitle className="text-gold font-serif">All Members</CardTitle>
+                <Badge variant="secondary" className="bg-gold/20 text-gold border-gold/30">{allUsers.length} members</Badge>
               </div>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/60 h-4 w-4" />
                 <Input
                   placeholder="Search members..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 bg-black border-gold/30 text-white focus:border-gold"
                 />
               </div>
             </CardHeader>
@@ -207,13 +207,13 @@ const Messages: React.FC = () => {
                     ))
                   ) : (
                     <div className="p-4 text-center">
-                      <div className="text-gray-400 mb-4">
+                      <div className="text-white/40 mb-4">
                         <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
                         </svg>
                       </div>
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">No members found</h3>
-                      <p className="text-gray-500">Try adjusting your search terms</p>
+                      <h3 className="text-lg font-medium text-white mb-2">No members found</h3>
+                      <p className="text-white/60">Try adjusting your search terms</p>
                     </div>
                   )}
                 </div>
@@ -222,10 +222,10 @@ const Messages: React.FC = () => {
           </Card>
 
           {/* Messages */}
-          <Card className="lg:col-span-2">
+          <Card className="lg:col-span-2 bg-charcoal border-gold/20">
             {currentUser ? (
               <>
-                <CardHeader className="border-b">
+                <CardHeader className="border-b border-gold/20">
                   <div className="flex items-center space-x-3">
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={currentUser.avatar_url || undefined} />
@@ -234,13 +234,13 @@ const Messages: React.FC = () => {
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <CardTitle className="text-lg">{currentUser.full_name}</CardTitle>
-                      <CardDescription>
+                      <CardTitle className="text-lg text-gold font-serif">{currentUser.full_name}</CardTitle>
+                      <CardDescription className="text-white/70">
                         {currentUser.handle ? `@${currentUser.handle}` : 'Online'}
                       </CardDescription>
                     </div>
                     {currentUser.membership_tier && (
-                      <Badge variant="secondary" className="ml-auto">
+                      <Badge variant="secondary" className="ml-auto bg-gold/20 text-gold border-gold/30">
                         {currentUser.membership_tier}
                       </Badge>
                     )}
@@ -341,13 +341,13 @@ const Messages: React.FC = () => {
             ) : (
               <div className="flex items-center justify-center h-[calc(100vh-400px)]">
                 <div className="text-center">
-                  <div className="text-gray-400 mb-4">
+                  <div className="text-white/40 mb-4">
                     <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                     </svg>
                   </div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">Select a member to start chatting</h3>
-                  <p className="text-gray-500">Choose a member from the list to start messaging</p>
+                  <h3 className="text-lg font-medium text-white mb-2">Select a member to start chatting</h3>
+                  <p className="text-white/60">Choose a member from the list to start messaging</p>
                 </div>
               </div>
             )}

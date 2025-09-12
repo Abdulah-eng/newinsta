@@ -7,6 +7,7 @@ import { Badge } from '../components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { Progress } from '../components/ui/progress';
+import { useNavigate } from 'react-router-dom';
 import { 
   Play, 
   Pause, 
@@ -18,13 +19,15 @@ import {
   ChevronLeft, 
   ChevronRight,
   Clock,
-  Shield
+  Shield,
+  Plus
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { cn } from '../lib/utils';
 
 const StoriesDisplay: React.FC = () => {
   const { user, profile } = useAuth();
+  const navigate = useNavigate();
   const {
     stories,
     myStories,
@@ -44,9 +47,13 @@ const StoriesDisplay: React.FC = () => {
 
   const emojis = ['❤️', '👍', '😂', '😢', '😡', '😍', '🤔', '👏'];
 
-  // Filter stories based on user's age verification and safe mode
+  // Filter stories based on user's age verification and safe mode, and exclude user's own stories
   const filteredStories = stories.filter(story => {
     if (story.is_nsfw && (!profile?.age_verified || profile?.safe_mode_enabled)) {
+      return false;
+    }
+    // Exclude user's own stories from the "other stories" section
+    if (story.author_id === user?.id) {
       return false;
     }
     return true;
@@ -146,19 +153,39 @@ const StoriesDisplay: React.FC = () => {
     <div className="space-y-4">
       {/* Stories Bar */}
       <div className="flex space-x-4 overflow-x-auto pb-4">
-        {/* My Stories */}
-        {myStories.length > 0 && (
-          <div className="flex-shrink-0">
-            <Card className="w-20 h-20 cursor-pointer hover:shadow-md transition-shadow">
-              <CardContent className="p-2 h-full flex flex-col items-center justify-center">
+        {/* My Stories - Always show */}
+        <div className="flex-shrink-0">
+          <Card 
+            className="w-20 h-20 cursor-pointer hover:shadow-md transition-shadow"
+            onClick={() => {
+              if (myStories.length > 0) {
+                // If user has stories, show the latest one
+                handleStoryClick(myStories[0]);
+              } else {
+                // If no stories, navigate to create story
+                navigate('/portal/create-story');
+              }
+            }}
+          >
+            <CardContent className="p-2 h-full flex flex-col items-center justify-center">
+              {myStories.length > 0 ? (
+                // Show user's avatar if they have stories
+                <Avatar className="w-12 h-12">
+                  <AvatarImage src={profile?.avatar_url || undefined} />
+                  <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold">
+                    {profile?.full_name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U'}
+                  </AvatarFallback>
+                </Avatar>
+              ) : (
+                // Show plus icon if no stories
                 <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
-                  +
+                  <Plus className="w-6 h-6" />
                 </div>
-                <p className="text-xs text-center mt-1">Your Story</p>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+              )}
+              <p className="text-xs text-center mt-1">Your Story</p>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Other Stories */}
         {Object.entries(storiesByAuthor).map(([authorId, authorStories]) => {

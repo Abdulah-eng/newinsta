@@ -6,6 +6,19 @@ import { toast } from 'sonner';
 
 type Profile = Database['public']['Tables']['profiles']['Row'];
 type Report = Database['public']['Tables']['reports']['Row'];
+
+interface ReportWithRelations extends Report {
+  reporter?: Profile | null;
+  reported_user?: Profile | null;
+  reported_post?: {
+    id: string;
+    content: string;
+    image_url?: string | null;
+    author_id: string;
+    created_at: string;
+  } | null;
+  resolved_by_user?: Profile | null;
+}
 type UserRole = Database['public']['Tables']['user_roles']['Row'];
 type AdminAction = Database['public']['Tables']['admin_actions']['Row'];
 type UserRestriction = Database['public']['Tables']['user_restrictions']['Row'];
@@ -17,12 +30,13 @@ interface UserWithStats extends Profile {
   following_count: number;
   last_login: string;
   subscription_status: string;
+  stripe_customer_id?: string | null;
 }
 
 interface AdminContextType {
   // Data
   users: UserWithStats[];
-  reports: Report[];
+  reports: ReportWithRelations[];
   adminActions: AdminAction[];
   auditLogs: AuditLog[];
   userRestrictions: UserRestriction[];
@@ -85,7 +99,7 @@ interface AdminProviderProps {
 export const AdminProvider: React.FC<AdminProviderProps> = ({ children }) => {
   const { user, profile } = useAuth();
   const [users, setUsers] = useState<UserWithStats[]>([]);
-  const [reports, setReports] = useState<Report[]>([]);
+  const [reports, setReports] = useState<ReportWithRelations[]>([]);
   const [adminActions, setAdminActions] = useState<AdminAction[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [userRestrictions, setUserRestrictions] = useState<UserRestriction[]>([]);
@@ -442,7 +456,7 @@ export const AdminProvider: React.FC<AdminProviderProps> = ({ children }) => {
         throw error;
       }
 
-      setReports(data || []);
+      setReports((data as ReportWithRelations[]) || []);
     } catch (err) {
       console.error('Error loading reports:', err);
       // Don't set error for missing tables, just log and continue

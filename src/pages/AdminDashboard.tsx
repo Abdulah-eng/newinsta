@@ -101,7 +101,7 @@ const AdminDashboard: React.FC = () => {
 
   const handleDeleteReportedPost = async () => {
     if (!deleteReport?.reported_post_id) return;
-    await deletePost(deleteReport.reported_post_id);
+    await deletePost(deleteReport.reported_post_id, 'Deleted by admin from report');
     await resolveReport(deleteReport.id, 'actioned', 'Post deleted');
     setDeleteDialogOpen(false);
     setDeleteReport(null);

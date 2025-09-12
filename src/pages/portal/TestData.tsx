@@ -2,18 +2,20 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import { useStories } from "@/contexts/StoriesContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Database, Users, FileText, TestTube } from "lucide-react";
+import { Database, Users, FileText, TestTube, Camera, Clock } from "lucide-react";
 
 const TestData = () => {
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
+  const { createStory } = useStories();
   const { toast } = useToast();
 
   const samplePosts = [
     {
-      content: "Welcome to Echelon Texas Digital! This is a sample post to demonstrate the community feed functionality.",
+      content: "Welcome to Echelon TX Digital! This is a sample post to demonstrate the community feed functionality.",
       is_nsfw: false
     },
     {
@@ -31,6 +33,25 @@ const TestData = () => {
     {
       content: "The member portal includes features like profile management, document access, and this community feed. Everything works in real-time!",
       is_nsfw: false
+    }
+  ];
+
+  const sampleStories = [
+    {
+      content: "Just arrived at Echelon TX! The atmosphere here is incredible 🏛️",
+      isNsfw: false
+    },
+    {
+      content: "Testing the story feature - this will disappear in 24 hours!",
+      isNsfw: false
+    },
+    {
+      content: "NSFW test story - this should be marked appropriately",
+      isNsfw: true
+    },
+    {
+      content: "Story with emoji test 🎉✨💫",
+      isNsfw: false
     }
   ];
 
@@ -106,12 +127,83 @@ const TestData = () => {
     }
   };
 
+  const createSampleStories = async () => {
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to create test stories.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      for (const story of sampleStories) {
+        await createStory(story.content, undefined, undefined, story.isNsfw);
+      }
+
+      toast({
+        title: "Success",
+        description: `Created ${sampleStories.length} sample stories!`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create sample stories.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const clearAllStories = async () => {
+    if (!user) {
+      toast({
+        title: "Error", 
+        description: "You must be logged in to clear stories.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('stories')
+        .delete()
+        .eq('author_id', user.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Cleared all your stories!",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to clear stories.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const features = [
     {
       icon: Database,
       title: "Community Feed",
       description: "Real-time post sharing with NSFW filtering, like/share functionality, and live updates.",
       testAction: "Create sample posts to test the feed"
+    },
+    {
+      icon: Camera,
+      title: "Stories Feature",
+      description: "Instagram-like 24-hour stories with NSFW filtering, auto-expire, and viewer tracking.",
+      testAction: "Create sample stories to test the feature"
     },
     {
       icon: Users,
@@ -151,22 +243,47 @@ const TestData = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-wrap gap-4">
-            <Button
-              onClick={createSamplePosts}
-              disabled={loading}
-              className="bg-gold text-black hover:bg-gold/90"
-            >
-              {loading ? "Creating..." : "Create Sample Posts"}
-            </Button>
-            <Button
-              onClick={clearAllPosts}
-              disabled={loading}
-              variant="outline"
-              className="border-gold/50 text-gold hover:bg-gold/20"
-            >
-              {loading ? "Clearing..." : "Clear My Posts"}
-            </Button>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <h4 className="text-white font-medium">Posts Testing</h4>
+              <div className="flex gap-2">
+                <Button
+                  onClick={createSamplePosts}
+                  disabled={loading}
+                  className="bg-gold text-black hover:bg-gold/90 flex-1"
+                >
+                  {loading ? "Creating..." : "Create Posts"}
+                </Button>
+                <Button
+                  onClick={clearAllPosts}
+                  disabled={loading}
+                  variant="outline"
+                  className="border-gold/50 text-gold hover:bg-gold/20"
+                >
+                  Clear
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <h4 className="text-white font-medium">Stories Testing</h4>
+              <div className="flex gap-2">
+                <Button
+                  onClick={createSampleStories}
+                  disabled={loading}
+                  className="bg-gold text-black hover:bg-gold/90 flex-1"
+                >
+                  {loading ? "Creating..." : "Create Stories"}
+                </Button>
+                <Button
+                  onClick={clearAllStories}
+                  disabled={loading}
+                  variant="outline"
+                  className="border-gold/50 text-gold hover:bg-gold/20"
+                >
+                  Clear
+                </Button>
+              </div>
+            </div>
           </div>
           <p className="text-white/60 text-sm mt-3">
             Use these actions to populate or clear test data for exploring portal features.
@@ -205,19 +322,25 @@ const TestData = () => {
             </p>
           </div>
           <div>
-            <h4 className="text-white font-medium mb-2">2. Profile Testing</h4>
+            <h4 className="text-white font-medium mb-2">2. Stories Testing</h4>
+            <p className="text-white/60 text-sm">
+              Create sample stories above, then visit the Feed page to see Instagram-like story functionality with 24-hour auto-expire and NSFW filtering.
+            </p>
+          </div>
+          <div>
+            <h4 className="text-white font-medium mb-2">3. Profile Testing</h4>
             <p className="text-white/60 text-sm">
               Visit your Profile page to edit information, view your posts, and test the profile update functionality.
             </p>
           </div>
           <div>
-            <h4 className="text-white font-medium mb-2">3. Create Post Testing</h4>
+            <h4 className="text-white font-medium mb-2">4. Create Post/Story Testing</h4>
             <p className="text-white/60 text-sm">
-              Use the Create Post page to test post creation, image uploads, and NSFW tagging features.
+              Use the Create Post and Create Story pages to test content creation, image uploads, and NSFW tagging features.
             </p>
           </div>
           <div>
-            <h4 className="text-white font-medium mb-2">4. Documents Testing</h4>
+            <h4 className="text-white font-medium mb-2">5. Documents Testing</h4>
             <p className="text-white/60 text-sm">
               The Documents section has sample policy documents ready for testing download and view functionality.
             </p>

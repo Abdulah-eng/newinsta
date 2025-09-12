@@ -60,21 +60,21 @@ All colors MUST be HSL.
 
     --radius: 0.75rem;
 
-    --sidebar-background: 0 0% 98%;
+    --sidebar-background: 0 0% 6%;
 
-    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-foreground: 42 58% 77%;
 
-    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary: 42 58% 77%;
 
-    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-primary-foreground: 0 0% 4%;
 
-    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent: 42 68% 87%;
 
-    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-accent-foreground: 0 0% 4%;
 
-    --sidebar-border: 220 13% 91%;
+    --sidebar-border: 42 20% 20%;
 
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-ring: 42 58% 77%;
   }
 
   .dark {
@@ -106,14 +106,14 @@ All colors MUST be HSL.
     --border: 42 20% 20%;
     --input: 0 0% 8%;
     --ring: 42 58% 77%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-background: 0 0% 6%;
+    --sidebar-foreground: 42 58% 77%;
+    --sidebar-primary: 42 58% 77%;
+    --sidebar-primary-foreground: 0 0% 4%;
+    --sidebar-accent: 42 68% 87%;
+    --sidebar-accent-foreground: 0 0% 4%;
+    --sidebar-border: 42 20% 20%;
+    --sidebar-ring: 42 58% 77%;
   }
 }
 
@@ -161,6 +161,18 @@ All colors MUST be HSL.
   
   ::-webkit-scrollbar-thumb:hover {
     background: hsl(var(--primary) / 0.5);
+  }
+
+  /* Hero carousel progress animation */
+  @keyframes progress {
+    0% {
+      transform: scaleX(0);
+      transform-origin: left;
+    }
+    100% {
+      transform: scaleX(1);
+      transform-origin: left;
+    }
   }
 }
 

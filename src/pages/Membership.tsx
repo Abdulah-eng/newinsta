@@ -11,9 +11,12 @@ const Membership = () => {
     subscriptionTier, 
     subscriptionEnd, 
     subscriptionLoading,
+    isTrialActive,
+    trialDaysRemaining,
     createCheckout, 
     manageSubscription,
-    checkSubscription 
+    checkSubscription,
+    startTrial
   } = useAuth();
   const features = [
     "Exclusive member community access",
@@ -46,7 +49,7 @@ const Membership = () => {
       <div className="max-w-4xl mx-auto px-6 py-16">
         <div className="text-center mb-16">
           <h1 className="text-5xl md:text-6xl font-serif text-primary mb-6">
-            {subscribed ? "Your Membership" : "Join Echelon Texas"}
+            {subscribed ? "Your Membership" : "Join Echelon TX"}
           </h1>
           <p className="text-xl text-white/80 max-w-2xl mx-auto">
             {subscribed 
@@ -59,14 +62,21 @@ const Membership = () => {
           {user && (
             <div className="mt-8 p-4 rounded-lg bg-card/50 border border-primary/20 max-w-md mx-auto">
               <div className="flex items-center justify-center space-x-2 mb-2">
-                <div className={`w-3 h-3 rounded-full ${subscribed ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                <div className={`w-3 h-3 rounded-full ${
+                  subscribed 
+                    ? (isTrialActive ? 'bg-blue-500' : 'bg-green-500')
+                    : 'bg-yellow-500'
+                }`} />
                 <span className="text-white font-medium">
-                  {subscribed ? 'Active Member' : 'Not Subscribed'}
+                  {subscribed 
+                    ? (isTrialActive ? `Trial Member (${trialDaysRemaining} days left)` : 'Active Member')
+                    : 'Not Subscribed'
+                  }
                 </span>
               </div>
               {subscribed && subscriptionEnd && (
                 <p className="text-white/60 text-sm">
-                  Renews on {formatDate(subscriptionEnd)}
+                  {isTrialActive ? 'Trial ends' : 'Renews on'} {formatDate(subscriptionEnd)}
                 </p>
               )}
               <Button
@@ -150,13 +160,26 @@ const Membership = () => {
                   </Link>
                 </div>
               ) : (
-                <Button 
-                  onClick={handleSubscribe}
-                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-6 text-lg"
-                  size="lg"
-                >
-                  Join Echelon TX Now
-                </Button>
+                <div className="space-y-4">
+                  <Button 
+                    onClick={startTrial}
+                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-6 text-lg"
+                    size="lg"
+                  >
+                    Start 3-Day Free Trial
+                  </Button>
+                  <Button 
+                    onClick={handleSubscribe}
+                    variant="outline"
+                    className="w-full border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+                    size="lg"
+                  >
+                    Subscribe for $20/month
+                  </Button>
+                  <p className="text-white/60 text-center text-sm">
+                    Try Echelon TX free for 3 days, then $20/month. Cancel anytime.
+                  </p>
+                </div>
               )}
 
               <p className="text-xs text-white/50 text-center">
