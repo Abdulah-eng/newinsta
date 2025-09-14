@@ -81,6 +81,10 @@ const Hero = () => {
             An exclusive private members club<br />
             where luxury meets community.
           </p>
+        </div>
+
+        {/* Bottom center button */}
+        <div className="absolute bottom-20 left-1/2 -translate-x-1/2">
           <Button 
             onClick={handleTrialClick}
             size="lg" 
