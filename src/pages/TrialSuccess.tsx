@@ -49,14 +49,15 @@ const TrialSuccess = () => {
             console.log('Profile updated successfully');
           }
 
-          // Update subscribers table
+          // Update subscribers table - only if this is actually a trial start
+          // The webhook should handle this, but we'll set it here for trial users
           const { error: subscriberError } = await supabase
             .from('subscribers')
             .upsert({
               email: user.email,
               user_id: user.id,
-              subscribed: true,
-              subscription_tier: 'trial',
+              subscribed: true, // This is correct for trial users
+              subscription_tier: 'premium', // Use 'premium' to match webhook handlers
               subscription_end: new Date(Date.now() + (3 * 24 * 60 * 60 * 1000)).toISOString(),
               updated_at: now
             }, { onConflict: 'email' });

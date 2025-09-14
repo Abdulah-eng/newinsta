@@ -1,13 +1,23 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import echelonLogo from "/logo.png";
 
 const Header = () => {
-  const { user, signOut } = useAuth();
+  const { user, signOut, subscribed, subscriptionLoading } = useAuth();
+  const navigate = useNavigate();
 
   const handleSignOut = async () => {
     await signOut();
+  };
+
+  const handlePortalClick = () => {
+    // Check if user is subscribed before navigating to portal
+    if (subscribed) {
+      navigate('/portal');
+    } else {
+      navigate('/membership');
+    }
   };
 
   return (
@@ -25,16 +35,25 @@ const Header = () => {
           <Link to="/membership" className="text-white hover:text-gold transition-colors">
             Membership
           </Link>
-          <Link to="/portal" className="text-white hover:text-gold transition-colors">
-            Member Portal
-          </Link>
+          <button 
+            onClick={handlePortalClick}
+            disabled={subscriptionLoading}
+            className="text-white hover:text-gold transition-colors disabled:opacity-50"
+          >
+            {subscriptionLoading ? "Checking..." : "Member Portal"}
+          </button>
         </nav>
 
         <div className="flex items-center space-x-4">
           {user ? (
             <>
-              <Button variant="outline" asChild className="border-gold text-gold hover:bg-gold hover:text-black">
-                <Link to="/portal">Portal</Link>
+              <Button 
+                variant="outline" 
+                onClick={handlePortalClick}
+                disabled={subscriptionLoading}
+                className="border-gold text-gold hover:bg-gold hover:text-black disabled:opacity-50"
+              >
+                {subscriptionLoading ? "Checking..." : "Portal"}
               </Button>
               <Button 
                 onClick={handleSignOut}
