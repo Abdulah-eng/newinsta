@@ -211,14 +211,6 @@ const Feed = () => {
     }
   };
 
-  const getMembershipBadgeColor = (tier?: string) => {
-    switch (tier) {
-      case 'elite': return 'bg-gold text-black';
-      case 'premium': return 'bg-gradient-to-r from-purple-400 to-purple-600 text-white';
-      case 'basic': return 'bg-gray-500 text-white';
-      default: return 'bg-gray-500 text-white';
-    }
-  };
 
   const filteredPosts = posts.filter(post => {
     // Show non-NSFW posts always
@@ -276,9 +268,9 @@ const Feed = () => {
         <h2 className="text-2xl font-serif text-gold">Community Feed</h2>
         <div className="flex items-center space-x-4">
           
-          <div className="flex items-center space-x-2">
-            <Settings className="h-4 w-4 text-white/60" />
-            <span className="text-white/60 text-sm">Safe Mode</span>
+          <div className="flex items-center space-x-3 bg-charcoal/50 px-4 py-2 rounded-lg border border-gold/20">
+            <Settings className="h-5 w-5 text-gold" />
+            <span className="text-gold font-medium text-sm">Safe Mode</span>
             <Switch
               checked={safeModeEnabled}
               onCheckedChange={async (checked) => {
@@ -301,7 +293,7 @@ const Feed = () => {
                   }
                 }
               }}
-              className="data-[state=checked]:bg-gold"
+              className="data-[state=checked]:bg-gold data-[state=unchecked]:bg-gray-600"
             />
           </div>
           <Button
@@ -378,11 +370,6 @@ const Feed = () => {
                         >
                           {post.profiles?.full_name || 'Anonymous'}
                         </button>
-                        {post.profiles?.membership_tier && (
-                          <Badge className={getMembershipBadgeColor(post.profiles.membership_tier)}>
-                            {post.profiles.membership_tier.toUpperCase()}
-                          </Badge>
-                        )}
                         {post.is_nsfw && (
                           <Badge variant="destructive" className="flex items-center space-x-1">
                             <AlertTriangle className="h-3 w-3" />

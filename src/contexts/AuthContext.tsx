@@ -22,6 +22,7 @@ interface Profile {
   messaging_enabled: boolean
   story_privacy: 'public' | 'followers' | 'close_friends'
   last_seen: string | null
+  navigate_to_portfolio: boolean
   created_at: string
   updated_at: string
   sdc_username?: string | null
@@ -77,6 +78,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const getProfile = async (userId: string) => {
     try {
+      console.log('getProfile called for userId:', userId);
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -86,6 +88,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (error) {
         console.error('Error fetching profile:', error)
         return null
+      }
+
+      console.log('Profile fetched successfully:', {
+        id: data?.id,
+        email: data?.email,
+        navigate_to_portfolio: data?.navigate_to_portfolio,
+        trial_started_at: data?.trial_started_at,
+        trial_ended_at: data?.trial_ended_at,
+        fullProfile: data
+      });
+
+      // If navigate_to_portfolio field doesn't exist, set it to false as default
+      if (data && data.navigate_to_portfolio === undefined) {
+        console.log('navigate_to_portfolio field not found, setting default to false');
+        data.navigate_to_portfolio = false;
       }
 
       return data
@@ -129,12 +146,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     try {
+      console.log('signIn called for email:', email);
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
       if (error) throw error
+
+      console.log('Sign in successful, user:', data.user?.id);
 
       // Update state immediately after successful login
       if (data.user) {
@@ -143,13 +163,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setLoading(false);
         
         // Fetch profile
+        console.log('Fetching profile for user:', data.user.id);
         const profile = await getProfile(data.user.id);
         setProfile(profile);
         
-        // Check subscription status
+        console.log('Profile set, checking subscription immediately...');
+        // Check subscription status immediately with the current session
+        await checkSubscriptionWithSession(data.session, profile);
+        
+        // Small delay to ensure state updates are reflected
         setTimeout(() => {
-          checkSubscription();
-        }, 100);
+          console.log('State update delay completed');
+        }, 50);
       }
 
       toast({
@@ -157,6 +182,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         description: "You've been signed in successfully.",
       })
     } catch (error: any) {
+      console.error('Sign in error:', error);
       toast({
         title: "Error", 
         description: error.message || "Supabase authentication not configured yet.",
@@ -210,8 +236,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }
 
-  const checkSubscription = async () => {
+  const checkSubscriptionWithSession = async (session: Session, profile: Profile | null) => {
+    console.log('checkSubscriptionWithSession called', {
+      hasSession: !!session?.access_token,
+      profile: profile ? {
+        id: profile.id,
+        navigate_to_portfolio: profile.navigate_to_portfolio,
+        trial_started_at: profile.trial_started_at,
+        trial_ended_at: profile.trial_ended_at
+      } : null
+    });
+
     if (!session?.access_token) {
+      console.log('No session access token, setting defaults');
       setSubscribed(false);
       setSubscriptionTier(null);
       setSubscriptionEnd(null);
@@ -223,22 +260,34 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       setSubscriptionLoading(true);
       
+      let hasActiveTrial = false;
+      let hasActiveSubscription = false;
+      
       // Check if user has an active trial
       if (profile?.trial_started_at && !profile?.trial_ended_at) {
         const trialStart = new Date(profile.trial_started_at);
         const trialEnd = new Date(trialStart.getTime() + (3 * 24 * 60 * 60 * 1000)); // 3 days
         const now = new Date();
         
+        console.log('Trial check:', {
+          trialStart: trialStart.toISOString(),
+          trialEnd: trialEnd.toISOString(),
+          now: now.toISOString(),
+          isActive: now < trialEnd
+        });
+        
         if (now < trialEnd) {
           // Trial is still active
+          hasActiveTrial = true;
           setIsTrialActive(true);
           setTrialDaysRemaining(Math.ceil((trialEnd.getTime() - now.getTime()) / (24 * 60 * 60 * 1000)));
           setSubscribed(true); // Give full access during trial
           setSubscriptionTier('trial');
           setSubscriptionEnd(trialEnd.toISOString());
-          return;
+          console.log('Trial is active, setting subscribed to true');
         } else {
           // Trial has expired, end it
+          console.log('Trial expired, ending it');
           await supabase
             .from('profiles')
             .update({ trial_ended_at: now.toISOString() })
@@ -246,23 +295,178 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
       }
 
-      // Check regular subscription
-      const { data, error } = await supabase.functions.invoke('check-subscription', {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
+      // Check regular subscription if no active trial
+      if (!hasActiveTrial) {
+        console.log('Checking regular subscription...');
+        const { data, error } = await supabase.functions.invoke('check-subscription', {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        });
 
-      if (error) {
-        console.error('Subscription check error:', error);
-        throw error;
+        if (error) {
+          console.error('Subscription check error:', error);
+          throw error;
+        }
+
+        hasActiveSubscription = data.subscribed || false;
+        setSubscribed(hasActiveSubscription);
+        setSubscriptionTier(data.subscription_tier || null);
+        setSubscriptionEnd(data.subscription_end || null);
+        setIsTrialActive(false);
+        setTrialDaysRemaining(0);
+        console.log('Subscription check result:', {
+          hasActiveSubscription,
+          subscriptionTier: data.subscription_tier,
+          subscriptionEnd: data.subscription_end
+        });
       }
 
-      setSubscribed(data.subscribed || false);
-      setSubscriptionTier(data.subscription_tier || null);
-      setSubscriptionEnd(data.subscription_end || null);
+      // Update navigate_to_portfolio based on subscription/trial status
+      const shouldNavigateToPortfolio = hasActiveTrial || hasActiveSubscription;
+      console.log('Navigation logic:', {
+        hasActiveTrial,
+        hasActiveSubscription,
+        shouldNavigateToPortfolio,
+        currentNavigateToPortfolio: profile?.navigate_to_portfolio
+      });
+
+      if (profile && profile.navigate_to_portfolio !== shouldNavigateToPortfolio) {
+        console.log('Updating navigate_to_portfolio in database:', shouldNavigateToPortfolio);
+        await supabase
+          .from('profiles')
+          .update({ navigate_to_portfolio: shouldNavigateToPortfolio })
+          .eq('id', profile.id);
+        
+        // Update local profile state
+        setProfile(prev => prev ? { ...prev, navigate_to_portfolio: shouldNavigateToPortfolio } : null);
+        console.log('Updated local profile state with navigate_to_portfolio:', shouldNavigateToPortfolio);
+      } else {
+        console.log('No need to update navigate_to_portfolio, already correct');
+      }
+      
+    } catch (error: any) {
+      console.error('Error checking subscription:', error);
+      // Set defaults on error
+      setSubscribed(false);
+      setSubscriptionTier(null);
+      setSubscriptionEnd(null);
       setIsTrialActive(false);
       setTrialDaysRemaining(0);
+    } finally {
+      setSubscriptionLoading(false);
+    }
+  };
+
+  const checkSubscription = async () => {
+    console.log('checkSubscription called', {
+      hasSession: !!session?.access_token,
+      profile: profile ? {
+        id: profile.id,
+        navigate_to_portfolio: profile.navigate_to_portfolio,
+        trial_started_at: profile.trial_started_at,
+        trial_ended_at: profile.trial_ended_at
+      } : null
+    });
+
+    if (!session?.access_token) {
+      console.log('No session access token, setting defaults');
+      setSubscribed(false);
+      setSubscriptionTier(null);
+      setSubscriptionEnd(null);
+      setIsTrialActive(false);
+      setTrialDaysRemaining(0);
+      return;
+    }
+
+    try {
+      setSubscriptionLoading(true);
+      
+      let hasActiveTrial = false;
+      let hasActiveSubscription = false;
+      
+      // Check if user has an active trial
+      if (profile?.trial_started_at && !profile?.trial_ended_at) {
+        const trialStart = new Date(profile.trial_started_at);
+        const trialEnd = new Date(trialStart.getTime() + (3 * 24 * 60 * 60 * 1000)); // 3 days
+        const now = new Date();
+        
+        console.log('Trial check:', {
+          trialStart: trialStart.toISOString(),
+          trialEnd: trialEnd.toISOString(),
+          now: now.toISOString(),
+          isActive: now < trialEnd
+        });
+        
+        if (now < trialEnd) {
+          // Trial is still active
+          hasActiveTrial = true;
+          setIsTrialActive(true);
+          setTrialDaysRemaining(Math.ceil((trialEnd.getTime() - now.getTime()) / (24 * 60 * 60 * 1000)));
+          setSubscribed(true); // Give full access during trial
+          setSubscriptionTier('trial');
+          setSubscriptionEnd(trialEnd.toISOString());
+          console.log('Trial is active, setting subscribed to true');
+        } else {
+          // Trial has expired, end it
+          console.log('Trial expired, ending it');
+          await supabase
+            .from('profiles')
+            .update({ trial_ended_at: now.toISOString() })
+            .eq('id', profile.id);
+        }
+      }
+
+      // Check regular subscription if no active trial
+      if (!hasActiveTrial) {
+        console.log('Checking regular subscription...');
+        const { data, error } = await supabase.functions.invoke('check-subscription', {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        });
+
+        if (error) {
+          console.error('Subscription check error:', error);
+          throw error;
+        }
+
+        hasActiveSubscription = data.subscribed || false;
+        setSubscribed(hasActiveSubscription);
+        setSubscriptionTier(data.subscription_tier || null);
+        setSubscriptionEnd(data.subscription_end || null);
+        setIsTrialActive(false);
+        setTrialDaysRemaining(0);
+        console.log('Subscription check result:', {
+          hasActiveSubscription,
+          subscriptionTier: data.subscription_tier,
+          subscriptionEnd: data.subscription_end
+        });
+      }
+
+      // Update navigate_to_portfolio based on subscription/trial status
+      const shouldNavigateToPortfolio = hasActiveTrial || hasActiveSubscription;
+      console.log('Navigation logic:', {
+        hasActiveTrial,
+        hasActiveSubscription,
+        shouldNavigateToPortfolio,
+        currentNavigateToPortfolio: profile?.navigate_to_portfolio
+      });
+
+      if (profile && profile.navigate_to_portfolio !== shouldNavigateToPortfolio) {
+        console.log('Updating navigate_to_portfolio in database:', shouldNavigateToPortfolio);
+        await supabase
+          .from('profiles')
+          .update({ navigate_to_portfolio: shouldNavigateToPortfolio })
+          .eq('id', profile.id);
+        
+        // Update local profile state
+        setProfile(prev => prev ? { ...prev, navigate_to_portfolio: shouldNavigateToPortfolio } : null);
+        console.log('Updated local profile state with navigate_to_portfolio:', shouldNavigateToPortfolio);
+      } else {
+        console.log('No need to update navigate_to_portfolio, already correct');
+      }
+      
     } catch (error: any) {
       console.error('Error checking subscription:', error);
       // Set defaults on error
@@ -293,7 +497,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .from('profiles')
         .update({ 
           trial_started_at: now,
-          trial_ended_at: null 
+          trial_ended_at: null,
+          navigate_to_portfolio: true
         })
         .eq('id', user.id);
 
@@ -305,6 +510,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setSubscribed(true);
       setSubscriptionTier('trial');
       setSubscriptionEnd(new Date(Date.now() + (3 * 24 * 60 * 60 * 1000)).toISOString());
+      
+      // Update local profile state
+      setProfile(prev => prev ? { ...prev, navigate_to_portfolio: true } : null);
 
       toast({
         title: "Trial Started!",
@@ -517,12 +725,10 @@ See deploy-functions.md for detailed instructions.`);
             }
             setProfile(profile);
             
-            // Check subscription status asynchronously without blocking loading
-            setTimeout(() => {
-              if (mounted) {
-                checkSubscription();
-              }
-            }, 100);
+            // Check subscription status immediately
+            if (mounted) {
+              await checkSubscriptionWithSession(session, profile);
+            }
           } catch (profileError) {
             console.error('Error fetching profile:', profileError);
             // If profile fetch fails, it might be due to invalid session
@@ -590,9 +796,7 @@ See deploy-functions.md for detailed instructions.`);
           const profile = await getProfile(session.user.id)
           setProfile(profile)
           // Check subscription status when user logs in
-          setTimeout(() => {
-            checkSubscription()
-          }, 100)
+          await checkSubscriptionWithSession(session, profile)
         } else {
           console.log('Processing logout event, clearing state...');
           setProfile(null)

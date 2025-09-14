@@ -148,12 +148,7 @@ const Profile = () => {
   const getMembershipLevel = () => {
     if (!subscribed) return "Free Member";
     if (isTrialActive) return `Trial Member (${trialDaysRemaining} days left)`;
-    return subscriptionTier === "premium" ? "Premium Member" : "Elite Member";
-  };
-
-  const getMembershipBadgeColor = () => {
-    if (!subscribed) return "bg-gray-500 text-white";
-    return subscriptionTier === "premium" ? "bg-gold text-black" : "bg-gradient-to-r from-purple-400 to-purple-600 text-white";
+    return "Verified Member";
   };
 
   if (loading) {
@@ -210,7 +205,7 @@ const Profile = () => {
                     )}
                   </div>
                   <p className="text-white/60">@{profile.handle || profile.full_name?.toLowerCase().replace(/\s+/g, '') || 'member'}</p>
-                  <Badge className={`${getMembershipBadgeColor()} font-medium mt-2`}>
+                  <Badge className="bg-gold/20 text-gold border-gold/30 font-medium mt-2">
                     {getMembershipLevel()}
                   </Badge>
                 </div>

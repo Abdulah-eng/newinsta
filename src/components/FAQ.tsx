@@ -7,7 +7,7 @@ const FAQ = () => {
       answer: "Your $20/month membership grants you access to our exclusive digital community, member feed, early updates on events, and priority access to our upcoming physical club location."
     },
     {
-      question: "How do I join Echelon Texas?",
+      question: "How do I join Echelon TX?",
       answer: "Simply click the 'Join Echelon TX' button and complete the secure checkout process. You'll receive immediate access to the member portal upon payment confirmation."
     },
     {
@@ -19,7 +19,7 @@ const FAQ = () => {
       answer: "Yes, you can cancel your membership at any time through your account settings. Your access will continue until the end of your current billing period."
     },
     {
-      question: "What makes Echelon Texas different?",
+      question: "What makes Echelon TX different?",
       answer: "We're not just a club - we're a carefully curated community of accomplished individuals who value quality, discretion, and meaningful connections in an exclusive environment."
     },
     {
@@ -36,7 +36,7 @@ const FAQ = () => {
             Frequently Asked Questions
           </h2>
           <p className="text-xl text-white/80">
-            Everything you need to know about joining Echelon Texas
+            Everything you need to know about joining Echelon TX
           </p>
         </div>
 

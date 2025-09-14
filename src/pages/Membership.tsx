@@ -116,8 +116,8 @@ const Membership = () => {
               </CardTitle>
               <CardDescription className="text-white/70 text-lg">
                 {subscribed 
-                  ? 'You have full access to the Echelon Texas community'
-                  : 'Full access to the Echelon Texas community'
+                  ? 'You have full access to the Echelon TX community'
+                  : 'Full access to the Echelon TX community'
                 }
               </CardDescription>
             </CardHeader>

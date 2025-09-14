@@ -178,14 +178,6 @@ const CommentSection = ({ postId }: CommentSectionProps) => {
     });
   };
 
-  const getMembershipBadgeColor = (tier?: string) => {
-    switch (tier) {
-      case 'elite': return 'bg-gold text-black';
-      case 'premium': return 'bg-gradient-to-r from-purple-400 to-purple-600 text-white';
-      case 'basic': return 'bg-gray-500 text-white';
-      default: return 'bg-gray-500 text-white';
-    }
-  };
 
   return (
     <div className="space-y-4">
@@ -249,11 +241,6 @@ const CommentSection = ({ postId }: CommentSectionProps) => {
                           <p className="text-white font-medium text-sm">
                             {comment.profiles?.full_name || 'Anonymous'}
                           </p>
-                          {comment.profiles?.membership_tier && (
-                            <Badge className={`${getMembershipBadgeColor(comment.profiles.membership_tier)} text-xs`}>
-                              {comment.profiles.membership_tier.toUpperCase()}
-                            </Badge>
-                          )}
                         </div>
                         <div className="flex items-center space-x-2">
                           <p className="text-white/50 text-xs">

@@ -30,14 +30,6 @@ interface GridPostProps {
 }
 
 const GridPost: React.FC<GridPostProps> = ({ post, onClick, ageVerified, safeModeEnabled }) => {
-  const getMembershipBadgeColor = (tier?: string) => {
-    switch (tier) {
-      case 'elite': return 'bg-gold text-black';
-      case 'premium': return 'bg-gradient-to-r from-purple-400 to-purple-600 text-white';
-      case 'basic': return 'bg-gray-500 text-white';
-      default: return 'bg-gray-500 text-white';
-    }
-  };
 
   const shouldShowNSFW = post.is_nsfw && (!ageVerified || safeModeEnabled);
 
@@ -102,11 +94,6 @@ const GridPost: React.FC<GridPostProps> = ({ post, onClick, ageVerified, safeMod
               <span className="text-white text-xs font-medium truncate max-w-20">
                 {post.profiles?.full_name || 'Anonymous'}
               </span>
-              {post.profiles?.membership_tier && (
-                <Badge className={`${getMembershipBadgeColor(post.profiles.membership_tier)} text-xs px-1 py-0`}>
-                  {post.profiles.membership_tier.charAt(0).toUpperCase()}
-                </Badge>
-              )}
             </div>
           </div>
         </div>

@@ -102,14 +102,6 @@ const FullScreenPostViewer: React.FC<FullScreenPostViewerProps> = ({
     }
   };
 
-  const getMembershipBadgeColor = (tier?: string) => {
-    switch (tier) {
-      case 'elite': return 'bg-gold text-black';
-      case 'premium': return 'bg-gradient-to-r from-purple-400 to-purple-600 text-white';
-      case 'basic': return 'bg-gray-500 text-white';
-      default: return 'bg-gray-500 text-white';
-    }
-  };
 
   if (!currentPost) return null;
 
@@ -213,11 +205,6 @@ const FullScreenPostViewer: React.FC<FullScreenPostViewerProps> = ({
                     >
                       {currentPost.profiles?.full_name || 'Anonymous'}
                     </button>
-                    {currentPost.profiles?.membership_tier && (
-                      <Badge className={getMembershipBadgeColor(currentPost.profiles.membership_tier)}>
-                        {currentPost.profiles.membership_tier.toUpperCase()}
-                      </Badge>
-                    )}
                     {currentPost.is_nsfw && (
                       <Badge variant="destructive" className="flex items-center space-x-1">
                         <AlertTriangle className="h-3 w-3" />
