@@ -203,7 +203,8 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription, supa
     email: email,
     user_id: profile.id,
     stripe_customer_id: customerId,
-    subscribed: !isTrial,
+    stripe_subscription_id: subscription.id,
+    subscribed: true, // Both trial and active subscriptions should be subscribed
     subscription_tier: "premium",
     subscription_end: subscriptionEnd,
     updated_at: new Date().toISOString(),
@@ -212,6 +213,8 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription, supa
   // Update profile
   const profileUpdates: any = {
     navigate_to_portfolio: true,
+    stripe_customer_id: customerId,
+    stripe_subscription_id: subscription.id,
     updated_at: new Date().toISOString(),
   };
 
@@ -250,11 +253,25 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription, supa
   const isActive = subscription.status === "active";
   const isTrialing = subscription.status === "trialing";
 
+  // Get user from profiles table to get user_id
+  const { data: profile, error: profileError } = await supabaseClient
+    .from('profiles')
+    .select('id, email')
+    .eq('email', email)
+    .single();
+
+  if (profileError || !profile) {
+    logStep("Profile not found for subscription update", { email, error: profileError });
+    return;
+  }
+
   // Update subscribers table
   await supabaseClient.from("subscribers").upsert({
     email: email,
+    user_id: profile.id,
     stripe_customer_id: customerId,
-    subscribed: isActive,
+    stripe_subscription_id: subscription.id,
+    subscribed: isActive || isTrialing, // Both active and trialing should be subscribed
     subscription_tier: isActive || isTrialing ? "premium" : null,
     subscription_end: subscriptionEnd,
     updated_at: new Date().toISOString(),
@@ -263,6 +280,8 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription, supa
   // Update profile
   const profileUpdates: any = {
     navigate_to_portfolio: isActive || isTrialing,
+    stripe_customer_id: customerId,
+    stripe_subscription_id: subscription.id,
     updated_at: new Date().toISOString(),
   };
 
@@ -298,10 +317,24 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription, supa
     return;
   }
 
+  // Get user from profiles table to get user_id
+  const { data: profile, error: profileError } = await supabaseClient
+    .from('profiles')
+    .select('id, email')
+    .eq('email', email)
+    .single();
+
+  if (profileError || !profile) {
+    logStep("Profile not found for subscription deletion", { email, error: profileError });
+    return;
+  }
+
   // Update subscribers table
   await supabaseClient.from("subscribers").upsert({
     email: email,
+    user_id: profile.id,
     stripe_customer_id: customerId,
+    stripe_subscription_id: null,
     subscribed: false,
     subscription_tier: null,
     subscription_end: null,

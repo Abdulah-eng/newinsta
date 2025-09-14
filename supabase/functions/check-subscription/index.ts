@@ -90,11 +90,13 @@ serve(async (req) => {
     }
 
     // Update the subscribers table with current status
+    // Only mark as subscribed if there's actually an active Stripe subscription
     await supabaseClient.from("subscribers").upsert({
       email: user.email,
       user_id: user.id,
       stripe_customer_id: customerId,
-      subscribed: hasActiveSub,
+      stripe_subscription_id: hasActiveSub ? subscriptions.data[0].id : null,
+      subscribed: hasActiveSub, // This should only be true if there's a valid Stripe subscription
       subscription_tier: hasActiveSub ? "premium" : null,
       subscription_end: subscriptionEnd,
       updated_at: new Date().toISOString(),
