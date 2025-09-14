@@ -154,14 +154,7 @@ const UserProfile = () => {
 
   const getMembershipLevel = () => {
     if (!userProfile?.membership_tier) return "Free Member";
-    return userProfile.membership_tier === "premium" ? "Premium Member" : "Elite Member";
-  };
-
-  const getMembershipBadgeColor = () => {
-    if (!userProfile?.membership_tier) return "bg-gray-500/20 text-gray-500 border-gray-500/30";
-    return userProfile.membership_tier === "premium" 
-      ? "bg-blue-500/20 text-blue-500 border-blue-500/30"
-      : "bg-gold/20 text-gold border-gold/30";
+    return "Verified Member";
   };
 
   if (loading) {
@@ -223,7 +216,7 @@ const UserProfile = () => {
                         )}
                       </div>
                       <p className="text-white/60">@{userProfile.handle || userProfile.full_name?.toLowerCase().replace(/\s+/g, '') || 'member'}</p>
-                      <Badge className={`${getMembershipBadgeColor()} font-medium mt-2`}>
+                      <Badge className="bg-gold/20 text-gold border-gold/30 font-medium mt-2">
                         {getMembershipLevel()}
                       </Badge>
                     </div>

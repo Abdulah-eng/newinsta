@@ -286,6 +286,7 @@ export type Database = {
           is_banned: boolean
           last_active: string | null
           membership_tier: string | null
+          navigate_to_portfolio: boolean
           safe_mode_enabled: boolean
           updated_at: string
         }
@@ -303,6 +304,7 @@ export type Database = {
           is_banned?: boolean
           last_active?: string | null
           membership_tier?: string | null
+          navigate_to_portfolio?: boolean
           safe_mode_enabled?: boolean
           updated_at?: string
         }
@@ -320,6 +322,7 @@ export type Database = {
           is_banned?: boolean
           last_active?: string | null
           membership_tier?: string | null
+          navigate_to_portfolio?: boolean
           safe_mode_enabled?: boolean
           updated_at?: string
         }

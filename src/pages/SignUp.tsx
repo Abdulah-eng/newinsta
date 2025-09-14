@@ -53,7 +53,7 @@ const SignUp = () => {
     <div className="min-h-screen bg-black flex items-center justify-center p-6">
       <Card className="w-full max-w-md bg-card border-border">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-serif text-primary">Join Echelon Texas</CardTitle>
+          <CardTitle className="text-2xl font-serif text-primary">Join Echelon TX</CardTitle>
           <CardDescription className="text-white/70">
             Create your exclusive membership account
           </CardDescription>

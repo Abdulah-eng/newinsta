@@ -14,8 +14,8 @@ const Header = () => {
     <header className="fixed top-0 w-full z-50 bg-black/90 backdrop-blur-sm border-b border-gold/20">
       <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
         <Link to="/" className="flex items-center space-x-3">
-          <img src={echelonLogo} alt="Echelon Texas" className="h-16 w-auto" />
-          <span className="text-xl font-serif text-gold">Echelon Texas</span>
+          <img src={echelonLogo} alt="Echelon TX" className="h-16 w-auto" />
+          <span className="text-xl font-serif text-gold">Echelon TX</span>
         </Link>
 
         <nav className="hidden md:flex items-center space-x-8">

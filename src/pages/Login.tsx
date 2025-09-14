@@ -10,20 +10,44 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const { signIn, user, subscribed } = useAuth();
+  const { signIn, user, profile, subscriptionLoading } = useAuth();
   const navigate = useNavigate();
 
   // Redirect if already logged in
   useEffect(() => {
-    if (user) {
-      // Check if user is subscribed or has trial access
-      if (subscribed) {
-        navigate("/portal");
+    console.log('Login useEffect triggered:', {
+      user: !!user,
+      subscriptionLoading,
+      profile: !!profile,
+      navigate_to_portfolio: profile?.navigate_to_portfolio,
+      profileData: profile
+    });
+    
+    // Only redirect if we have all the data and subscription check is complete
+    if (user && !subscriptionLoading && profile && profile.navigate_to_portfolio !== undefined) {
+      console.log('Login redirect logic:', {
+        navigate_to_portfolio: profile.navigate_to_portfolio,
+        willNavigateTo: profile.navigate_to_portfolio ? '/portal' : '/membership'
+      });
+      
+      // Use navigate_to_portfolio to determine redirect destination
+      if (profile.navigate_to_portfolio) {
+        console.log('Navigating to /portal');
+        // Use replace to prevent back button issues
+        navigate("/portal", { replace: true });
       } else {
-        navigate("/membership");
+        console.log('Navigating to /membership');
+        navigate("/membership", { replace: true });
       }
+    } else {
+      console.log('Not redirecting yet:', {
+        hasUser: !!user,
+        subscriptionLoading,
+        hasProfile: !!profile,
+        navigateToPortfolioDefined: profile?.navigate_to_portfolio !== undefined
+      });
     }
-  }, [user, subscribed, navigate]);
+  }, [user, profile, subscriptionLoading, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,7 +69,7 @@ const Login = () => {
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-serif text-gold">Welcome Back</CardTitle>
           <CardDescription className="text-white/70">
-            Sign in to access your Echelon Texas membership
+            Sign in to access your Echelon TX membership
           </CardDescription>
         </CardHeader>
         <CardContent>

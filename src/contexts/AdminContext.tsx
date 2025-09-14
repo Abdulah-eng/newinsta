@@ -18,6 +18,7 @@ interface ReportWithRelations extends Report {
     created_at: string;
   } | null;
   resolved_by_user?: Profile | null;
+  admin_notes?: string | null;
 }
 type UserRole = Database['public']['Tables']['user_roles']['Row'];
 type AdminAction = Database['public']['Tables']['admin_actions']['Row'];

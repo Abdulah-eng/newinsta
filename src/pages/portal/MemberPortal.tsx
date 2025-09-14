@@ -1,5 +1,6 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { MemberPortalSidebar } from "@/components/MemberPortalSidebar";
+import TrialCountdown from "@/components/TrialCountdown";
 import { Outlet } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -36,6 +37,7 @@ const MemberPortal = () => {
             </div>
           </header>
           <div className="p-6">
+            <TrialCountdown />
             <Outlet />
           </div>
         </main>

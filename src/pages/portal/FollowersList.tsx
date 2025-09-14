@@ -131,14 +131,6 @@ const FollowersList = () => {
     });
   };
 
-  const getMembershipBadgeColor = (tier?: string) => {
-    switch (tier) {
-      case 'elite': return 'bg-gold text-black';
-      case 'premium': return 'bg-gradient-to-r from-purple-400 to-purple-600 text-white';
-      case 'basic': return 'bg-gray-500 text-white';
-      default: return 'bg-gray-500 text-white';
-    }
-  };
 
   if (loading) {
     return (
@@ -218,11 +210,6 @@ const FollowersList = () => {
                           <p className="text-white/60 text-sm">
                             @{user.handle || user.full_name?.toLowerCase().replace(/\s+/g, '') || 'member'}
                           </p>
-                          {user.membership_tier && (
-                            <Badge className={getMembershipBadgeColor(user.membership_tier)}>
-                              {user.membership_tier.toUpperCase()}
-                            </Badge>
-                          )}
                         </div>
                         <p className="text-white/40 text-xs">
                           {type === 'followers' ? 'Started following' : 'Followed'} {formatDate(user.follow_created_at)}
