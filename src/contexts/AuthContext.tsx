@@ -290,7 +290,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           console.log('Trial expired, ending it');
           await supabase
             .from('profiles')
-            .update({ trial_ended_at: now.toISOString() })
+            .update({ 
+              trial_ended_at: now.toISOString(),
+              navigate_to_portfolio: false
+            })
             .eq('id', profile.id);
         }
       }
@@ -412,7 +415,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           console.log('Trial expired, ending it');
           await supabase
             .from('profiles')
-            .update({ trial_ended_at: now.toISOString() })
+            .update({ 
+              trial_ended_at: now.toISOString(),
+              navigate_to_portfolio: false
+            })
             .eq('id', profile.id);
         }
       }
@@ -490,40 +496,90 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       return;
     }
 
-    try {
-      const now = new Date().toISOString();
-      
-      const { error } = await supabase
-        .from('profiles')
-        .update({ 
-          trial_started_at: now,
-          trial_ended_at: null,
-          navigate_to_portfolio: true
-        })
-        .eq('id', user.id);
-
-      if (error) throw error;
-
-      // Update local state
-      setIsTrialActive(true);
-      setTrialDaysRemaining(3);
-      setSubscribed(true);
-      setSubscriptionTier('trial');
-      setSubscriptionEnd(new Date(Date.now() + (3 * 24 * 60 * 60 * 1000)).toISOString());
-      
-      // Update local profile state
-      setProfile(prev => prev ? { ...prev, navigate_to_portfolio: true } : null);
-
-      toast({
-        title: "Trial Started!",
-        description: "Your 3-day free trial has begun. Enjoy full access to Echelon TX!",
-      });
-    } catch (error: any) {
+    if (!session?.access_token) {
       toast({
         title: "Error",
-        description: error.message || "Failed to start trial.",
+        description: "Please log in to start your trial.",
         variant: "destructive",
       });
+      return;
+    }
+
+    try {
+      console.log('Starting trial checkout...');
+      
+      // Try the new trial checkout function first
+      try {
+        const { data, error } = await supabase.functions.invoke('create-trial-checkout', {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        });
+
+        if (error) {
+          console.error('Trial checkout error:', error);
+          throw error;
+        }
+
+        if (!data?.url) {
+          console.error('No checkout URL in response:', data);
+          throw new Error('No checkout URL received');
+        }
+
+        console.log('Opening trial checkout URL:', data.url);
+        // Open Stripe checkout in a new tab
+        window.open(data.url, '_blank');
+
+        toast({
+          title: "Starting Trial",
+          description: "Please add your payment method to start your 3-day free trial. You won't be charged until the trial ends.",
+        });
+        return;
+      } catch (trialError: any) {
+        console.log('Trial checkout function not available, falling back to regular checkout');
+        
+        // Fallback to regular checkout with trial setup
+        const { data, error } = await supabase.functions.invoke('create-checkout', {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        });
+
+        if (error) {
+          console.error('Checkout error:', error);
+          throw error;
+        }
+
+        if (!data?.url) {
+          console.error('No checkout URL in response:', data);
+          throw new Error('No checkout URL received');
+        }
+
+        console.log('Opening checkout URL:', data.url);
+        // Open Stripe checkout in a new tab
+        window.open(data.url, '_blank');
+
+        toast({
+          title: "Starting Trial",
+          description: "Please add your payment method to start your 3-day free trial. You won't be charged until the trial ends.",
+        });
+      }
+    } catch (error: any) {
+      console.error('Error in startTrial:', error);
+      
+      if (error.message?.includes('Function not found') || error.message?.includes('404')) {
+        toast({
+          title: "Setup Required",
+          description: "Stripe integration not configured. Please deploy the Supabase Edge Functions.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to start trial.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
