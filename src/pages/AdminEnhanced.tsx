@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
 
 const AdminEnhanced: React.FC = () => {
   const { user, profile } = useAuth();
@@ -45,9 +46,9 @@ const AdminEnhanced: React.FC = () => {
     resolveReport,
     banUser,
     unbanUser,
-    // The following advanced admin APIs may not exist in the current context;
-    // gate optional calls in handlers where used.
-    setUserRole,
+    // Optional advanced admin APIs
+    grantRole,
+    revokeRole,
     setAgeVerification,
     setSafeMode,
     hidePost,
@@ -101,8 +102,52 @@ const AdminEnhanced: React.FC = () => {
     await unbanUser(userId);
   };
 
-  const handleSetUserRole = async (userId: string, role: string) => {
-    await setUserRole(userId, role as any);
+  // Two-role handler: 'member' or 'admin' with fallback when grant/revoke blocked by RLS
+  const handleSetSimpleRole = async (userId: string, role: 'member' | 'admin') => {
+    try {
+      if (role === 'admin') {
+        if (typeof grantRole === 'function') {
+          try {
+            await grantRole(userId, 'admin');
+          } catch (e) {
+            const { error } = await supabase
+              .from('profiles')
+              .update({ is_admin: true })
+              .eq('id', userId);
+            if (error) throw error;
+          }
+        } else {
+          const { error } = await supabase
+            .from('profiles')
+            .update({ is_admin: true })
+            .eq('id', userId);
+          if (error) throw error;
+        }
+        toast({ title: 'Role updated', description: 'User is now Admin.' });
+      } else {
+        if (typeof revokeRole === 'function') {
+          try {
+            await revokeRole(userId, 'admin');
+          } catch (e) {
+            const { error } = await supabase
+              .from('profiles')
+              .update({ is_admin: false })
+              .eq('id', userId);
+            if (error) throw error;
+          }
+        } else {
+          const { error } = await supabase
+            .from('profiles')
+            .update({ is_admin: false })
+            .eq('id', userId);
+          if (error) throw error;
+        }
+        toast({ title: 'Role updated', description: 'User set to Member.' });
+      }
+    } catch (err) {
+      console.error('Error updating role:', err);
+      toast({ title: 'Error', description: 'Failed to update role.', variant: 'destructive' });
+    }
   };
 
   const handleSetAgeVerification = async (userId: string, verified: boolean) => {
@@ -440,18 +485,17 @@ const AdminEnhanced: React.FC = () => {
                               </Button>
                             )}
                             
+                            {/* Two-role selector */}
                             <Select
-                              value={user.user_roles?.find(r => r.is_active)?.role || 'member'}
-                              onValueChange={(role) => handleSetUserRole(user.id, role)}
+                              value={user.is_admin ? 'admin' : 'member'}
+                              onValueChange={(role) => handleSetSimpleRole(user.id, role as 'member' | 'admin')}
                             >
                               <SelectTrigger className="w-32">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="member">Member</SelectItem>
-                                <SelectItem value="moderator">Moderator</SelectItem>
                                 <SelectItem value="admin">Admin</SelectItem>
-                                <SelectItem value="super_admin">Super Admin</SelectItem>
                               </SelectContent>
                             </Select>
                             

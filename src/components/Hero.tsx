@@ -67,20 +67,12 @@ const Hero = () => {
         ))}
       </div>
 
-
-
-      {/* Content Overlay - Positioned to showcase the building */}
+      {/* Content Overlay - Bottom centered with title above tagline */}
       <div className="absolute inset-0 z-10">
-        {/* Left side content - positioned to not cover the main building */}
-        <div className="absolute left-8 top-1/2 -translate-y-1/2 max-w-2xl">
+        <div className="absolute left-1/2 bottom-8 -translate-x-1/2 text-center px-6">
           <h1 className="text-6xl md:text-7xl font-serif text-white mb-6 tracking-wide leading-tight">
-            Welcome to{" "}
-            <span className="text-gold font-bold">Echelon TX</span>
+            Welcome to <span className="text-gold font-bold">Echelon TX</span>
           </h1>
-        </div>
-
-        {/* Bottom center content with description and button */}
-        <div className="absolute left-1/2 bottom-8 -translate-x-1/2 text-center">
           <p className="text-2xl md:text-3xl text-white/90 mb-8 leading-relaxed">
             An exclusive private members club<br />
             where luxury meets community.
@@ -93,7 +85,6 @@ const Hero = () => {
             Start 3-Day Free Trial – $20/month
           </Button>
         </div>
-
       </div>
     </section>
   );

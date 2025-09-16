@@ -380,19 +380,23 @@ export const AdminProvider: React.FC<AdminProviderProps> = ({ children }) => {
     try {
       setError(null);
 
+      if (role !== 'admin') {
+        console.warn('Only admin role is supported by this implementation. Ignoring:', role);
+        return;
+      }
+
       const { error } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: userId,
-          role,
-          granted_by: user.id,
-          expires_at: expiresAt
-        });
+        .from('profiles')
+        .update({ is_admin: true })
+        .eq('id', userId);
 
       if (error) throw error;
 
       // Log admin action
-      await logAction('grant_role', 'user', userId, { role, expiresAt });
+      await logAction('grant_role', 'user', userId, { role });
+
+      // Update local state for immediate UI feedback
+      setUsers(prev => prev.map(u => (u.id === userId ? { ...u, is_admin: true } : u)));
 
       toast.success(`Role ${role} granted successfully`);
     } catch (err) {
@@ -409,16 +413,23 @@ export const AdminProvider: React.FC<AdminProviderProps> = ({ children }) => {
     try {
       setError(null);
 
+      if (role !== 'admin') {
+        console.warn('Only admin role is supported by this implementation. Ignoring revoke:', role);
+        return;
+      }
+
       const { error } = await supabase
-        .from('user_roles')
-        .update({ is_active: false })
-        .eq('user_id', userId)
-        .eq('role', role);
+        .from('profiles')
+        .update({ is_admin: false })
+        .eq('id', userId);
 
       if (error) throw error;
 
       // Log admin action
       await logAction('revoke_role', 'user', userId, { role });
+
+      // Update local state for immediate UI feedback
+      setUsers(prev => prev.map(u => (u.id === userId ? { ...u, is_admin: false } : u)));
 
       toast.success(`Role ${role} revoked successfully`);
     } catch (err) {
