@@ -368,7 +368,10 @@ const Feed = () => {
 
       {/* Feed Controls */}
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-serif text-gold">Community Feed</h2>
+        <h2 className="text-2xl font-serif text-gold">
+          <span className="sm:hidden">Feed</span>
+          <span className="hidden sm:inline">Community Feed</span>
+        </h2>
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-3 bg-charcoal/50 px-4 py-2 rounded-lg border border-gold/20">
             <Settings className="h-5 w-5 text-gold" />

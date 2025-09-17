@@ -17,26 +17,26 @@ const MemberPortal = () => {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-black">
+      <div className="min-h-screen w-full bg-black flex flex-col md:flex-row">
         <MemberPortalSidebar />
         <main className="flex-1">
-          <header className="h-16 flex items-center justify-between border-b border-gold/20 bg-charcoal px-6">
-            <div className="flex items-center space-x-4">
-              <SidebarTrigger className="text-gold hover:text-gold-light" />
-              <h2 className="text-xl font-serif text-gold">
+          <header className="h-16 flex items-center justify-between border-b border-gold/20 bg-charcoal px-4 md:px-6">
+            <div className="flex items-center space-x-3 md:space-x-4 min-w-0">
+              <SidebarTrigger className="text-gold hover:text-gold-light shrink-0" />
+              <h2 className="text-base md:text-xl font-serif text-gold truncate">
                 Welcome back, {profile?.full_name || user?.email}
               </h2>
             </div>
             
             {/* Subscription Status Indicator */}
-            <div className="flex items-center space-x-2">
+            <div className="hidden sm:flex items-center space-x-2 shrink-0">
               <div className={`w-2 h-2 rounded-full ${subscribed ? 'bg-green-500' : 'bg-yellow-500'}`} />
-              <span className={`text-sm font-medium ${subscribed ? 'text-green-500' : 'text-yellow-500'}`}>
+              <span className={`text-xs md:text-sm font-medium ${subscribed ? 'text-green-500' : 'text-yellow-500'}`}>
                 {subscribed ? 'Premium Member' : 'Free Access'}
               </span>
             </div>
           </header>
-          <div className="p-6">
+          <div className="p-4 md:p-6">
             <TrialCountdown />
             <Outlet />
           </div>
