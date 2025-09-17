@@ -27,6 +27,10 @@ const DirectMessages: React.FC = () => {
     setCurrentConversation,
     deleteConversation,
     uploadMessageMedia,
+    // Added for user search
+    users,
+    isSearchingUsers,
+    searchUsers,
   } = useMessaging();
 
   const [newMessage, setNewMessage] = useState('');
@@ -34,6 +38,7 @@ const DirectMessages: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showNewChat, setShowNewChat] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [newChatQuery, setNewChatQuery] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when new messages arrive
@@ -47,6 +52,14 @@ const DirectMessages: React.FC = () => {
       markAsRead(currentConversation.id);
     }
   }, [currentConversation, markAsRead]);
+
+  // Trigger user search when query changes
+  useEffect(() => {
+    const q = newChatQuery.trim();
+    if (q.length === 0) return;
+    const id = setTimeout(() => searchUsers(q), 250);
+    return () => clearTimeout(id);
+  }, [newChatQuery, searchUsers]);
 
   // Send message
   const handleSendMessage = async () => {
@@ -149,9 +162,46 @@ const DirectMessages: React.FC = () => {
                   <DialogTitle>Start New Conversation</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    This feature will be available soon. You can start conversations by visiting other members' profiles.
-                  </p>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search members by name or handle..."
+                      value={newChatQuery}
+                      onChange={(e) => setNewChatQuery(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                  <div className="max-h-72 overflow-auto border rounded-md">
+                    {isSearchingUsers ? (
+                      <div className="p-4 text-sm text-muted-foreground">Searching...</div>
+                    ) : users.length === 0 && newChatQuery.trim().length > 0 ? (
+                      <div className="p-4 text-sm text-muted-foreground">No members found</div>
+                    ) : (
+                      users.map((u) => (
+                        <div key={u.id} className="flex items-center justify-between p-3 hover:bg-muted/50">
+                          <div className="flex items-center space-x-3">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={u.avatar_url || undefined} />
+                              <AvatarFallback>{u.full_name?.charAt(0) || '?'}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="text-sm font-medium">{u.full_name || u.handle || 'Unknown'}</div>
+                              {u.handle && <div className="text-xs text-muted-foreground">@{u.handle}</div>}
+                            </div>
+                          </div>
+                          <Button
+                            size="sm"
+                            onClick={async () => {
+                              await startConversation(u.id);
+                              setShowNewChat(false);
+                            }}
+                          >
+                            Start
+                          </Button>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
               </DialogContent>
             </Dialog>
@@ -238,16 +288,9 @@ const DirectMessages: React.FC = () => {
                             </AlertDialog>
                           </div>
                         </div>
-                        {conversation.last_message && (
-                          <p className="text-sm text-muted-foreground truncate">
-                            {conversation.last_message.content}
-                          </p>
-                        )}
-                        {conversation.last_message && (
-                          <p className="text-xs text-muted-foreground">
-                            {new Date(conversation.last_message.created_at).toLocaleDateString()}
-                          </p>
-                        )}
+                        <p className="text-sm text-muted-foreground truncate">
+                          {conversation.last_message || 'No messages yet'}
+                        </p>
                       </div>
                     </div>
                   </div>

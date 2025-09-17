@@ -8,7 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useFollow } from "@/contexts/FollowContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Heart, Share2, AlertTriangle, RefreshCw, MapPin, Settings, Plus, MoreHorizontal, Link as LinkIcon, Flag } from "lucide-react";
+import { Heart, Share2, AlertTriangle, RefreshCw, MapPin, Settings, Plus, MoreHorizontal, Link as LinkIcon, Flag, Search } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
 import FollowButton from "@/components/FollowButton";
@@ -19,6 +19,7 @@ import PostInteractions from "@/components/PostInteractions";
 import StoriesDisplay from "@/components/StoriesDisplay";
 import ReportModal from "@/components/ReportModal";
 import { mockPosts, type MockPost } from "@/lib/mockData";
+import { Input } from "@/components/ui/input";
 
 interface Post {
   id: string;
@@ -49,6 +50,13 @@ const Feed = () => {
   const { user, subscribed, profile, updateProfile } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // User search state
+  const [userSearch, setUserSearch] = useState("");
+  const [userResults, setUserResults] = useState<any[]>([]);
+  const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [searchingUsers, setSearchingUsers] = useState(false);
+  const [searchFocused, setSearchFocused] = useState(false);
 
   const fetchPosts = async () => {
     try {
@@ -144,6 +152,54 @@ const Feed = () => {
     }
   };
 
+  // Load all users for initial list when focusing search
+  const loadAllUsers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, avatar_url, handle')
+        .order('full_name', { ascending: true })
+        .limit(50);
+      if (error) throw error;
+      setAllUsers(data || []);
+    } catch (e) {
+      console.error(e);
+      setAllUsers([]);
+    }
+  };
+
+  // Search users by name/handle
+  useEffect(() => {
+    const q = userSearch.trim();
+    if (!q) {
+      setUserResults([]);
+      if (searchFocused && allUsers.length === 0) {
+        // Load baseline list when focused and empty query
+        loadAllUsers();
+      }
+      return;
+    }
+    const handle = setTimeout(async () => {
+      try {
+        setSearchingUsers(true);
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, full_name, avatar_url, handle')
+          .or(`full_name.ilike.%${q}%,handle.ilike.%${q}%`)
+          .order('full_name', { ascending: true })
+          .limit(20);
+        if (error) throw error;
+        setUserResults(data || []);
+      } catch (e) {
+        console.error(e);
+        setUserResults([]);
+      } finally {
+        setSearchingUsers(false);
+      }
+    }, 250);
+    return () => clearTimeout(handle);
+  }, [userSearch, searchFocused]);
+
 
   useEffect(() => {
     fetchPosts();
@@ -228,6 +284,8 @@ const Feed = () => {
     );
   }
 
+  const displayUsers = userSearch.trim() ? userResults : allUsers;
+
   return (
     <div className="max-w-2xl mx-auto space-y-6 relative">
       {/* Floating Create Post Button */}
@@ -239,8 +297,53 @@ const Feed = () => {
         <Plus className="h-8 w-8 text-black font-bold" />
       </Button>
 
+      {/* User Search (Above Stories) */}
+      <div className="bg-charcoal border-gold/20 rounded-lg p-4 relative">
+        <div className="flex items-center">
+          <Search className="h-4 w-4 text-gold mr-2" />
+          <Input
+            placeholder="Search members by name or handle..."
+            value={userSearch}
+            onChange={(e) => setUserSearch(e.target.value)}
+            onFocus={() => {
+              setSearchFocused(true);
+              if (!userSearch.trim() && allUsers.length === 0) {
+                loadAllUsers();
+              }
+            }}
+            className="bg-black/30 border-gold/20 text-gold placeholder:text-gold/60"
+          />
+        </div>
+        {(searchFocused && (displayUsers.length > 0 || searchingUsers)) && (
+          <div className="mt-3 max-h-80 overflow-auto rounded-lg border border-gold/20 divide-y divide-gold/10">
+            {searchingUsers && (
+              <div className="p-3 text-sm text-white/70">Searching...</div>
+            )}
+            {!searchingUsers && displayUsers.map((u) => (
+              <div
+                key={u.id}
+                className="p-3 hover:bg-white/5 cursor-pointer flex items-center space-x-3"
+                onClick={() => navigate(`/portal/user/${u.id}`)}
+              >
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={u.avatar_url || undefined} />
+                  <AvatarFallback>{u.full_name?.charAt(0) || '?'}</AvatarFallback>
+                </Avatar>
+                <div className="text-sm text-white/90">
+                  <div className="font-medium">{u.full_name || u.handle || 'Unknown'}</div>
+                  {u.handle && <div className="text-xs text-white/60">@{u.handle}</div>}
+                </div>
+              </div>
+            ))}
+            {!searchingUsers && displayUsers.length === 0 && (
+              <div className="p-3 text-sm text-white/70">No members found</div>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Stories Section */}
-        <StoriesDisplay />
+      <StoriesDisplay />
 
       {/* Create Post Section - Simplified for Feed */}
       <Card className="bg-charcoal border-gold/20">
@@ -267,7 +370,6 @@ const Feed = () => {
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-serif text-gold">Community Feed</h2>
         <div className="flex items-center space-x-4">
-          
           <div className="flex items-center space-x-3 bg-charcoal/50 px-4 py-2 rounded-lg border border-gold/20">
             <Settings className="h-5 w-5 text-gold" />
             <span className="text-gold font-medium text-sm">Safe Mode</span>
