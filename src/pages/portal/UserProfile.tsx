@@ -194,8 +194,8 @@ const UserProfile = () => {
           <CardContent className="p-6">
             <div className="flex flex-col space-y-6">
               {/* Profile Info */}
-              <div className="flex items-start space-x-6">
-                <Avatar className="w-24 h-24 border-2 border-gold/30">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:space-x-6 space-y-4 sm:space-y-0">
+                <Avatar className="w-24 h-24 border-2 border-gold/30 self-center sm:self-auto">
                   <AvatarImage src={userProfile.avatar_url || ''} />
                   <AvatarFallback className="bg-gold/20 text-gold text-2xl">
                     {userProfile.full_name?.charAt(0) || userProfile.email?.charAt(0) || 'U'}
@@ -203,42 +203,43 @@ const UserProfile = () => {
                 </Avatar>
 
                 <div className="flex-1">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                     <div>
-                      <div className="flex items-center space-x-3 mb-2">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-3 mb-2">
                         <h1 className="text-2xl font-semibold text-white">
                           {userProfile.full_name || userProfile.email}
                         </h1>
                         {userProfile.membership_tier && (
-                          <Badge className="bg-green-500/20 text-green-500 border-green-500/30">
+                          <Badge className="bg-green-500/20 text-green-500 border-green-500/30 w-max mt-1 sm:mt-0">
                             Verified Member
                           </Badge>
                         )}
                       </div>
-                      <p className="text-white/60">@{userProfile.handle || userProfile.full_name?.toLowerCase().replace(/\s+/g, '') || 'member'}</p>
-                      <Badge className="bg-gold/20 text-gold border-gold/30 font-medium mt-2">
+                      <p className="text-white/60 break-all">@{userProfile.handle || userProfile.full_name?.toLowerCase().replace(/\s+/g, '') || 'member'}</p>
+                      <Badge className="bg-gold/20 text-gold border-gold/30 font-medium mt-2 w-max">
                         {getMembershipLevel()}
                       </Badge>
                     </div>
-                    
                     {!isOwnProfile && (
-                      <FollowButton
-                        userId={userId!}
-                        userName={userProfile.full_name || userProfile.email}
-                        variant="default"
-                        size="default"
-                      />
+                      <div className="sm:self-start">
+                        <FollowButton
+                          userId={userId!}
+                          userName={userProfile.full_name || userProfile.email}
+                          variant="default"
+                          size="default"
+                        />
+                      </div>
                     )}
                   </div>
 
-                  <div className="flex space-x-8 text-center mt-6">
-                    <div>
+                  <div className="grid grid-cols-3 gap-3 text-center mt-6 sm:flex sm:justify-start sm:space-x-8">
+                    <div className="hover:bg-white/5 rounded-lg p-2 transition-colors w-full sm:flex-none">
                       <div className="text-xl font-bold text-white">{userPosts.length}</div>
                       <div className="text-white/60 text-sm">Posts</div>
                     </div>
                     <button
                       onClick={() => navigate(`/portal/user/${userId}/followers`)}
-                      className="hover:bg-white/5 rounded-lg p-2 transition-colors"
+                      className="hover:bg-white/5 rounded-lg p-2 transition-colors w-full sm:flex-none"
                     >
                       <div className="text-xl font-bold text-white hover:text-gold transition-colors">
                         {followersCount.toLocaleString()}
@@ -247,7 +248,7 @@ const UserProfile = () => {
                     </button>
                     <button
                       onClick={() => navigate(`/portal/user/${userId}/following`)}
-                      className="hover:bg-white/5 rounded-lg p-2 transition-colors"
+                      className="hover:bg-white/5 rounded-lg p-2 transition-colors w-full sm:flex-none"
                     >
                       <div className="text-xl font-bold text-white hover:text-gold transition-colors">
                         {followingCount.toLocaleString()}
