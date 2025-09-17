@@ -500,17 +500,31 @@ export const MessagingProvider: React.FC<MessagingProviderProps> = ({ children }
         return;
       }
 
-      // Create new conversation by sending a message
-      // This will automatically create the conversation
-      await sendMessage(userId, 'Hello! 👋');
+      // Create a new empty conversation by creating a conversation entry
+      // We'll create a minimal conversation object and add it to the state
+      const newConversation = {
+        id: `temp-${Date.now()}`, // Temporary ID
+        other_user_id: userId,
+        other_user: users.find(u => u.id === userId) || { id: userId, full_name: 'Unknown User', avatar_url: null, handle: null },
+        last_message: null,
+        last_message_at: new Date().toISOString(),
+        unread_count: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      // Add to conversations list
+      setConversations(prev => [newConversation, ...prev]);
       
-      // No need to reload conversations - sendMessage already updates the state
+      // Select the new conversation
+      selectConversation(newConversation);
+      
     } catch (err: any) {
       console.error('Error starting conversation:', err);
       setError(err.message || 'Failed to start conversation');
       // Don't show error toast for better UX
     }
-  }, [user, conversations, sendMessage, loadConversations]);
+  }, [user, conversations, users, selectConversation]);
 
   // Cleanup on unmount
   useEffect(() => {
