@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Settings, Grid, Heart, MessageCircle, RefreshCw, Play, Plus } from "lucide-react";
+import { Edit, Settings, Grid, Heart, MessageCircle, RefreshCw, Play, Plus, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,9 +28,14 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   const [ageVerified, setAgeVerified] = useState(false);
   const [safeModeEnabled, setSafeModeEnabled] = useState(true);
+  const [selectedPost, setSelectedPost] = useState<UserPost | null>(null);
   const { user, profile, subscribed, subscriptionTier, checkSubscription, isTrialActive, trialDaysRemaining, startTrial } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  const handlePostClick = (post: UserPost) => {
+    setSelectedPost(post);
+  };
 
   const fetchUserPosts = async () => {
     if (!user) return;
@@ -331,7 +336,7 @@ const Profile = () => {
           ) : (
             <div className="grid grid-cols-3 gap-1">
               {userPosts.map((post) => (
-                <div key={post.id} className="relative group cursor-pointer">
+                <div key={post.id} className="relative group cursor-pointer" onClick={() => handlePostClick(post)}>
                   <div className="aspect-square bg-black/30 overflow-hidden">
                     {post.image_url ? (
                       <NSFWBlurOverlay
@@ -363,16 +368,16 @@ const Profile = () => {
                   </div>
                   
                   {/* Hover Overlay with Stats */}
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/60 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/60 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
                     <div className="text-white text-center">
                       <div className="flex items-center space-x-4 text-sm font-medium">
                         <div className="flex items-center space-x-1">
                           <Heart className="h-4 w-4" />
-                          <span>{post.likes}</span>
+                          <span>{post.likes_count || 0}</span>
                         </div>
                         <div className="flex items-center space-x-1">
                           <MessageCircle className="h-4 w-4" />
-                          <span>{post.comments}</span>
+                          <span>{post.comments_count || 0}</span>
                         </div>
                       </div>
                     </div>
@@ -383,6 +388,79 @@ const Profile = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Post Modal */}
+      {selectedPost && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-charcoal rounded-lg max-w-4xl max-h-[90vh] w-full overflow-hidden">
+            <div className="flex">
+              {/* Image/Content Section */}
+              <div className="flex-1 relative">
+                {selectedPost.image_url ? (
+                  <img
+                    src={selectedPost.image_url}
+                    alt="Post"
+                    className="w-full h-full object-contain max-h-[80vh]"
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-96 p-8">
+                    <p className="text-white text-lg text-center">{selectedPost.content}</p>
+                  </div>
+                )}
+                
+                {/* Close Button */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedPost(null)}
+                  className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              {/* Post Details Section */}
+              <div className="w-80 border-l border-gold/20 p-6 flex flex-col">
+                <div className="flex items-center space-x-3 mb-4">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={profile?.avatar_url || ''} />
+                    <AvatarFallback className="bg-gold text-black">
+                      {profile?.full_name?.charAt(0) || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="text-white font-medium">{profile?.full_name || 'You'}</p>
+                    <p className="text-white/60 text-sm">@{profile?.handle || 'user'}</p>
+                  </div>
+                </div>
+                
+                <div className="flex-1">
+                  <p className="text-white mb-4">{selectedPost.content}</p>
+                  
+                  <div className="flex items-center space-x-6 text-white/60 text-sm">
+                    <div className="flex items-center space-x-1">
+                      <Heart className="h-4 w-4" />
+                      <span>{selectedPost.likes_count || 0}</span>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <MessageCircle className="h-4 w-4" />
+                      <span>{selectedPost.comments_count || 0}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="text-white/40 text-xs">
+                  {new Date(selectedPost.created_at).toLocaleDateString()} at{' '}
+                  {new Date(selectedPost.created_at).toLocaleTimeString([], { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

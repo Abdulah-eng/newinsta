@@ -29,7 +29,6 @@ const CommentSection = ({ postId }: CommentSectionProps) => {
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showComments, setShowComments] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -56,14 +55,11 @@ const CommentSection = ({ postId }: CommentSectionProps) => {
   };
 
   useEffect(() => {
-    if (showComments) {
-      fetchComments();
-    }
-  }, [postId, showComments]);
+    fetchComments();
+  }, [postId]);
 
   // Set up real-time subscription for comments
   useEffect(() => {
-    if (!showComments) return;
 
     const channel = supabase
       .channel(`comments-${postId}`)
@@ -96,7 +92,7 @@ const CommentSection = ({ postId }: CommentSectionProps) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [postId, showComments]);
+  }, [postId]);
 
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -181,94 +177,83 @@ const CommentSection = ({ postId }: CommentSectionProps) => {
 
   return (
     <div className="space-y-4">
-      {/* Toggle Comments Button */}
-      <Button
-        variant="ghost"
-        onClick={() => setShowComments(!showComments)}
-        className="text-white/60 hover:text-gold p-0"
-      >
-        <MessageCircle className="h-4 w-4 mr-2" />
-        {comments.length > 0 ? `${comments.length} Comments` : 'Comment'}
-      </Button>
+      {/* Always show comments when component is rendered */}
+      <div className="space-y-4 border-t border-gold/20 pt-4">
+        {/* Add Comment Form */}
+        {user && (
+          <form onSubmit={handleSubmitComment} className="space-y-3">
+            <Textarea
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              placeholder="Add a comment..."
+              className="bg-black border-gold/30 text-white focus:border-gold min-h-[80px]"
+              rows={3}
+            />
+            <Button
+              type="submit"
+              disabled={loading || !newComment.trim()}
+              className="bg-gold hover:bg-gold-light text-black font-medium"
+              size="sm"
+            >
+              {loading ? "Posting..." : (
+                <>
+                  <Send className="h-4 w-4 mr-2" />
+                  Post Comment
+                </>
+              )}
+            </Button>
+          </form>
+        )}
 
-      {showComments && (
-        <div className="space-y-4 border-t border-gold/20 pt-4">
-          {/* Add Comment Form */}
-          {user && (
-            <form onSubmit={handleSubmitComment} className="space-y-3">
-              <Textarea
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                placeholder="Add a comment..."
-                className="bg-black border-gold/30 text-white focus:border-gold min-h-[80px]"
-                rows={3}
-              />
-              <Button
-                type="submit"
-                disabled={loading || !newComment.trim()}
-                className="bg-gold hover:bg-gold-light text-black font-medium"
-                size="sm"
-              >
-                {loading ? "Posting..." : (
-                  <>
-                    <Send className="h-4 w-4 mr-2" />
-                    Post Comment
-                  </>
-                )}
-              </Button>
-            </form>
-          )}
-
-          {/* Comments List */}
-          <div className="space-y-3">
-            {comments.length === 0 ? (
-              <p className="text-white/50 text-center py-4">
-                No comments yet. Be the first to comment!
-              </p>
-            ) : (
-              comments.map((comment) => (
-                <div key={comment.id} className="bg-black/30 rounded-lg p-4">
-                  <div className="flex items-start space-x-3">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={comment.profiles?.avatar_url || ''} />
-                      <AvatarFallback className="bg-gold text-black text-sm">
-                        {comment.profiles?.full_name?.charAt(0) || 'U'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
-                          <p className="text-white font-medium text-sm">
-                            {comment.profiles?.full_name || 'Anonymous'}
-                          </p>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <p className="text-white/50 text-xs">
-                            {formatDate(comment.created_at)}
-                          </p>
-                          {user?.id === comment.author_id && (
-                            <Button
-                              onClick={() => handleDeleteComment(comment.id)}
-                              variant="ghost"
-                              size="sm"
-                              className="text-red-400 hover:text-red-300 h-6 w-6 p-0"
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          )}
-                        </div>
+        {/* Comments List */}
+        <div className="space-y-3">
+          {comments.length === 0 ? (
+            <p className="text-white/50 text-center py-4">
+              No comments yet. Be the first to comment!
+            </p>
+          ) : (
+            comments.map((comment) => (
+              <div key={comment.id} className="bg-black/30 rounded-lg p-4">
+                <div className="flex items-start space-x-3">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={comment.profiles?.avatar_url || ''} />
+                    <AvatarFallback className="bg-gold text-black text-sm">
+                      {comment.profiles?.full_name?.charAt(0) || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <p className="text-white font-medium text-sm">
+                          {comment.profiles?.full_name || 'Anonymous'}
+                        </p>
                       </div>
-                      <p className="text-white/80 text-sm mt-1 whitespace-pre-wrap">
-                        {comment.content}
-                      </p>
+                      <div className="flex items-center space-x-2">
+                        <p className="text-white/50 text-xs">
+                          {formatDate(comment.created_at)}
+                        </p>
+                        {user?.id === comment.author_id && (
+                          <Button
+                            onClick={() => handleDeleteComment(comment.id)}
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-400 hover:text-red-300 h-6 w-6 p-0"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
+                    <p className="text-white/80 text-sm mt-1 whitespace-pre-wrap">
+                      {comment.content}
+                    </p>
                   </div>
                 </div>
-              ))
-            )}
-          </div>
+              </div>
+            ))
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 };

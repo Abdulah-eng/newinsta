@@ -5,7 +5,7 @@ import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../components/ui/dialog';
 import { Progress } from '../components/ui/progress';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -20,10 +20,12 @@ import {
   ChevronRight,
   Clock,
   Shield,
-  Plus
+  Plus,
+  Smile
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { cn } from '../lib/utils';
+import { supabase } from '../integrations/supabase/client';
 
 const StoriesDisplay: React.FC = () => {
   const { user, profile } = useAuth();
@@ -44,6 +46,12 @@ const StoriesDisplay: React.FC = () => {
   const [progress, setProgress] = useState(0);
   const [showViewerList, setShowViewerList] = useState(false);
   const [selectedEmoji, setSelectedEmoji] = useState<string | null>(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [commentText, setCommentText] = useState('');
+  const [isPaused, setIsPaused] = useState(false);
+  const [storyComments, setStoryComments] = useState<any[]>([]);
+  const [storyReactions, setStoryReactions] = useState<any[]>([]);
+  const [showCommentsList, setShowCommentsList] = useState(false);
 
   const emojis = ['❤️', '👍', '😂', '😢', '😡', '😍', '🤔', '👏'];
 
@@ -71,7 +79,7 @@ const StoriesDisplay: React.FC = () => {
   const allStories = Object.values(storiesByAuthor).flat();
 
   useEffect(() => {
-    if (selectedStory) {
+    if (selectedStory && !isPaused) {
       // Start progress timer
       const startTime = Date.now();
       const duration = 5000; // 5 seconds per story
@@ -88,7 +96,39 @@ const StoriesDisplay: React.FC = () => {
 
       return () => clearInterval(timer);
     }
-  }, [selectedStory, currentStoryIndex]);
+  }, [selectedStory, currentStoryIndex, isPaused]);
+
+  // Pause story when any interactive element is opened
+  useEffect(() => {
+    const shouldPause = showEmojiPicker || showViewerList || showCommentsList;
+    setIsPaused(shouldPause);
+  }, [showEmojiPicker, showViewerList, showCommentsList]);
+
+  // Handle clicking outside to close interactive elements
+  const handleOutsideClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    
+    // Check if click is outside the interactive elements
+    if (!target.closest('.comment-box') && 
+        !target.closest('.emoji-picker') && 
+        !target.closest('.viewer-list') &&
+        !target.closest('.comment-input')) {
+      
+      // Close all interactive elements
+      setShowCommentsList(false);
+      setShowEmojiPicker(false);
+      setShowViewerList(false);
+    }
+  };
+
+  // Fetch comments and reactions when story is selected
+  useEffect(() => {
+    if (selectedStory) {
+      console.log('Fetching comments and reactions for story:', selectedStory.id);
+      fetchStoryComments(selectedStory.id);
+      fetchStoryReactions(selectedStory.id);
+    }
+  }, [selectedStory]);
 
   const handleStoryClick = (story: any) => {
     setSelectedStory(story);
@@ -131,6 +171,103 @@ const StoriesDisplay: React.FC = () => {
     } else {
       await addReaction(selectedStory.id, emoji);
       setSelectedEmoji(emoji);
+      
+      // Send to chat
+      await sendStoryToChat('reaction', '', emoji);
+    }
+  };
+
+  const fetchStoryComments = async (storyId: string) => {
+    try {
+      // First get the comments
+      const { data: comments, error: commentsError } = await supabase
+        .from('story_comments')
+        .select('*')
+        .eq('story_id', storyId)
+        .order('created_at', { ascending: true });
+
+      if (commentsError) throw commentsError;
+
+      // Then get the profiles for each comment
+      const commentsWithProfiles = await Promise.all(
+        (comments || []).map(async (comment) => {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('id, full_name, avatar_url, handle')
+            .eq('id', comment.user_id)
+            .single();
+
+          return {
+            ...comment,
+            profiles: profile
+          };
+        })
+      );
+
+      console.log('Fetched story comments:', commentsWithProfiles);
+      setStoryComments(commentsWithProfiles);
+    } catch (error) {
+      console.error('Error fetching story comments:', error);
+    }
+  };
+
+  const fetchStoryReactions = async (storyId: string) => {
+    try {
+      // First get the reactions
+      const { data: reactions, error: reactionsError } = await supabase
+        .from('story_reactions')
+        .select('*')
+        .eq('story_id', storyId)
+        .order('created_at', { ascending: true });
+
+      if (reactionsError) throw reactionsError;
+
+      // Then get the profiles for each reaction
+      const reactionsWithProfiles = await Promise.all(
+        (reactions || []).map(async (reaction) => {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('id, full_name, avatar_url, handle')
+            .eq('id', reaction.user_id)
+            .single();
+
+          return {
+            ...reaction,
+            profiles: profile
+          };
+        })
+      );
+
+      console.log('Fetched story reactions:', reactionsWithProfiles);
+      setStoryReactions(reactionsWithProfiles);
+    } catch (error) {
+      console.error('Error fetching story reactions:', error);
+    }
+  };
+
+  const handleComment = async () => {
+    if (!selectedStory || !commentText.trim()) return;
+    
+    try {
+      const { error } = await supabase
+        .from('story_comments')
+        .insert({
+          story_id: selectedStory.id,
+          user_id: user?.id,
+          comment: commentText.trim()
+        });
+
+      if (error) throw error;
+
+      setCommentText('');
+      
+      // Send to chat
+      await sendStoryToChat('comment', commentText.trim());
+      
+      // Refresh comments
+      await fetchStoryComments(selectedStory.id);
+    } catch (error) {
+      console.error('Error adding comment:', error);
     }
   };
 
@@ -138,6 +275,30 @@ const StoriesDisplay: React.FC = () => {
     await deleteStory(storyId);
     if (selectedStory?.id === storyId) {
       setSelectedStory(null);
+    }
+  };
+
+  const sendStoryToChat = async (type: 'comment' | 'reaction', content: string, emoji?: string) => {
+    if (!selectedStory || !user) return;
+
+    try {
+      const { error } = await supabase
+        .from('direct_messages')
+        .insert({
+          sender_id: user.id,
+          recipient_id: selectedStory.author_id,
+          content: type === 'comment' 
+            ? `💬 Commented on your story: "${content}"` 
+            : `😊 Reacted ${emoji} to your story`,
+          story_reference: selectedStory.id
+        });
+
+      if (error) throw error;
+
+      // Show success message
+      console.log('Story interaction sent to chat');
+    } catch (error) {
+      console.error('Error sending story to chat:', error);
     }
   };
 
@@ -223,9 +384,10 @@ const StoriesDisplay: React.FC = () => {
         <DialogContent className="max-w-md p-0 h-[80vh]">
           <DialogHeader className="sr-only">
             <DialogTitle>Story Viewer</DialogTitle>
+            <DialogDescription>View and interact with stories</DialogDescription>
           </DialogHeader>
           {selectedStory && (
-            <div className="relative h-full">
+            <div className="relative h-full" onClick={handleOutsideClick}>
               {/* Story Header */}
               <div className="absolute top-0 left-0 right-0 z-10 p-4 bg-gradient-to-b from-black/50 to-transparent">
                 <div className="flex items-center justify-between">
@@ -262,7 +424,7 @@ const StoriesDisplay: React.FC = () => {
               </div>
 
               {/* Story Content */}
-              <div className="h-full flex items-center justify-center bg-black">
+              <div className="relative h-full flex items-center justify-center bg-black">
                 {selectedStory.image_url && (
                   <img
                     src={selectedStory.image_url}
@@ -286,6 +448,15 @@ const StoriesDisplay: React.FC = () => {
                     </p>
                   </div>
                 )}
+                
+                {/* Pause Overlay */}
+                {isPaused && (
+                  <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                    <div className="bg-black/60 rounded-full p-3">
+                      <Pause className="h-8 w-8 text-white" />
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Story Footer */}
@@ -297,7 +468,12 @@ const StoriesDisplay: React.FC = () => {
                         size="sm"
                         variant="ghost"
                         className="text-white hover:bg-white/20"
-                        onClick={() => setShowViewerList(true)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowViewerList(true);
+                          setShowEmojiPicker(false);
+                          setShowCommentsList(false);
+                        }}
                       >
                         <Eye className="h-4 w-4 mr-1" />
                         {selectedStory.view_count}
@@ -306,31 +482,126 @@ const StoriesDisplay: React.FC = () => {
                         size="sm"
                         variant="ghost"
                         className="text-white hover:bg-white/20"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowCommentsList(!showCommentsList);
+                          setShowEmojiPicker(false);
+                          setShowViewerList(false);
+                        }}
                       >
                         <MessageCircle className="h-4 w-4 mr-1" />
-                        {selectedStory.reaction_count}
+                        {storyComments.length}
                       </Button>
                     </div>
                   </div>
                   
                   {/* Reaction Picker */}
-                  <div className="flex space-x-1">
-                    {emojis.map((emoji) => (
-                      <Button
-                        key={emoji}
-                        size="sm"
-                        variant="ghost"
-                        className={cn(
-                          "text-white hover:bg-white/20",
-                          selectedEmoji === emoji && "bg-white/30"
-                        )}
-                        onClick={() => handleReaction(emoji)}
-                      >
-                        {emoji}
-                      </Button>
-                    ))}
+                  <div className="flex flex-col items-end space-y-2">
+                    {/* Emoji Toggle Button */}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-white hover:bg-white/20"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowEmojiPicker(!showEmojiPicker);
+                        setShowViewerList(false);
+                        setShowCommentsList(false);
+                      }}
+                    >
+                      <Smile className="h-4 w-4" />
+                    </Button>
+                    
+                    {/* Emoji Picker */}
+                    {showEmojiPicker && (
+                      <div className="bg-black/80 backdrop-blur-sm rounded-lg p-2 border border-white/20 emoji-picker">
+                        <div className="grid grid-cols-4 gap-1">
+                          {emojis.map((emoji) => (
+                            <Button
+                              key={emoji}
+                              size="sm"
+                              variant="ghost"
+                              className={cn(
+                                "text-white hover:bg-white/20 w-8 h-8 p-0",
+                                selectedEmoji === emoji && "bg-white/30"
+                              )}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleReaction(emoji);
+                                setShowEmojiPicker(false);
+                              }}
+                            >
+                              {emoji}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
+
+
+                {/* Comments Display */}
+                {showCommentsList && (
+                  <div className="absolute bottom-16 left-4 right-4 z-20 max-h-64 overflow-y-auto comment-box">
+                    <div className="bg-black/80 backdrop-blur-sm rounded-lg p-3 border border-white/20">
+                      <div className="space-y-3">
+                        {/* Comments List */}
+                        {console.log('Rendering comments:', storyComments)}
+                        {storyComments.length > 0 ? (
+                          <div className="space-y-2 max-h-48 overflow-y-auto">
+                            {storyComments.map((comment) => (
+                              <div key={comment.id} className="bg-white/5 rounded-lg p-2">
+                                <div className="flex items-center space-x-2 mb-1">
+                                  <span className="text-white font-medium text-xs">
+                                    {comment.profiles?.full_name || 'User'}
+                                  </span>
+                                  <span className="text-white/50 text-xs">
+                                    {new Date(comment.created_at).toLocaleTimeString([], { 
+                                      hour: '2-digit', 
+                                      minute: '2-digit' 
+                                    })}
+                                  </span>
+                                </div>
+                                <p className="text-white text-sm">{comment.comment}</p>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-white/50 text-center py-4">
+                            No comments yet
+                          </p>
+                        )}
+
+                        {/* Add Comment Input */}
+                        <div className="border-t border-white/20 pt-3 comment-input">
+                          <div className="flex space-x-2">
+                            <input
+                              type="text"
+                              value={commentText}
+                              onChange={(e) => setCommentText(e.target.value)}
+                              placeholder="Add a comment..."
+                              className="flex-1 bg-transparent text-white placeholder-white/60 border border-white/20 rounded px-3 py-2 text-sm"
+                              onKeyPress={(e) => e.key === 'Enter' && handleComment()}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                            <Button
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleComment();
+                              }}
+                              disabled={!commentText.trim()}
+                              className="bg-gold text-black hover:bg-gold/80"
+                            >
+                              Send
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Navigation */}
@@ -363,21 +634,22 @@ const StoriesDisplay: React.FC = () => {
 
       {/* Viewer List Modal */}
       <Dialog open={showViewerList} onOpenChange={setShowViewerList}>
-        <DialogContent>
+        <DialogContent className="viewer-list">
           <DialogHeader>
             <DialogTitle>Story Viewers</DialogTitle>
+            <DialogDescription>People who have viewed this story</DialogDescription>
           </DialogHeader>
           <div className="max-h-64 overflow-y-auto">
-            {selectedStory?.views?.map((view: any) => (
+            {selectedStory?.story_views?.map((view: any) => (
               <div key={view.id} className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded">
                 <Avatar className="w-8 h-8">
-                  <AvatarImage src={view.viewer?.avatar_url || undefined} />
+                  <AvatarImage src={view.profiles?.avatar_url || undefined} />
                   <AvatarFallback>
-                    {view.viewer?.full_name?.charAt(0).toUpperCase() || 'U'}
+                    {view.profiles?.full_name?.charAt(0).toUpperCase() || 'U'}
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="font-medium">{view.viewer?.full_name || 'User'}</p>
+                  <p className="font-medium">{view.profiles?.full_name || 'User'}</p>
                   <p className="text-sm text-gray-500">
                     {formatDistanceToNow(new Date(view.viewed_at), { addSuffix: true })}
                   </p>

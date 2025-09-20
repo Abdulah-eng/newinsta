@@ -83,7 +83,13 @@ export const StoriesProvider: React.FC<StoriesProviderProps> = ({ children }) =>
           story_views(
             id,
             viewer_id,
-            viewed_at
+            viewed_at,
+            profiles!viewer_id(
+              id,
+              full_name,
+              avatar_url,
+              handle
+            )
           ),
           story_reactions(
             id,
@@ -150,7 +156,13 @@ export const StoriesProvider: React.FC<StoriesProviderProps> = ({ children }) =>
           story_views(
             id,
             viewer_id,
-            viewed_at
+            viewed_at,
+            profiles!viewer_id(
+              id,
+              full_name,
+              avatar_url,
+              handle
+            )
           ),
           story_reactions(
             id,
@@ -255,7 +267,13 @@ export const StoriesProvider: React.FC<StoriesProviderProps> = ({ children }) =>
           story_views(
             id,
             viewer_id,
-            viewed_at
+            viewed_at,
+            profiles!viewer_id(
+              id,
+              full_name,
+              avatar_url,
+              handle
+            )
           ),
           story_reactions(
             id,
@@ -342,7 +360,7 @@ export const StoriesProvider: React.FC<StoriesProviderProps> = ({ children }) =>
         .insert({
           story_id: storyId,
           user_id: user.id,
-          emoji
+          emoji: emoji
         });
 
       if (error) throw error;
@@ -354,7 +372,7 @@ export const StoriesProvider: React.FC<StoriesProviderProps> = ({ children }) =>
             ? { 
                 ...story, 
                 reaction_count: story.reaction_count + 1,
-                reactions: [...story.reactions, { id: '', story_id: storyId, user_id: user.id, emoji, created_at: new Date().toISOString() }]
+                reactions: [...story.reactions, { id: '', story_id: storyId, user_id: user.id, emoji: emoji, created_at: new Date().toISOString() }]
               }
             : story
         )

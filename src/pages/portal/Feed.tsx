@@ -47,6 +47,7 @@ const Feed = () => {
   const [ageVerified, setAgeVerified] = useState(false);
   const [reportModalOpen, setReportModalOpen] = useState(false);
   const [selectedPostForReport, setSelectedPostForReport] = useState<Post | null>(null);
+  const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
   const { user, subscribed, profile, updateProfile } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -150,6 +151,18 @@ const Feed = () => {
         });
       }
     }
+  };
+
+  const handleCommentClick = (postId: string) => {
+    setExpandedComments(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(postId)) {
+        newSet.delete(postId);
+      } else {
+        newSet.add(postId);
+      }
+      return newSet;
+    });
   };
 
   // Load all users for initial list when focusing search
@@ -578,7 +591,7 @@ const Feed = () => {
                     authorId={post.author_id}
                     initialLikes={post.likes}
                     initialComments={post.comments}
-                    onComment={() => console.log('Comment on post:', post.id)}
+                    onComment={() => handleCommentClick(post.id)}
                     onShare={() => handleShare(post)}
                     onReport={() => setSelectedPostForReport(post)}
                   />
@@ -592,7 +605,7 @@ const Feed = () => {
                   </div>
                   
                   {/* Comment Section */}
-                  {(subscribed || user?.id === post.author_id) && (
+                  {(subscribed || user?.id === post.author_id) && expandedComments.has(post.id) && (
                     <div className="mt-4">
                       <CommentSection postId={post.id} />
                     </div>
