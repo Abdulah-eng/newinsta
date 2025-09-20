@@ -20,10 +20,10 @@ const Membership = () => {
   } = useAuth();
   const features = [
     "Exclusive member community access",
-    "Premium networking opportunities", 
+    "Professional networking opportunities", 
     "Early access to events and announcements",
     "Private member feed and interactions",
-    "Secure, verified member directory",
+    "Secure member directory",
     "Priority booking for club amenities",
     "Access to member-only content",
     "24/7 concierge support"

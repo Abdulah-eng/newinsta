@@ -152,10 +152,6 @@ const UserProfile = () => {
     });
   };
 
-  const getMembershipLevel = () => {
-    if (!userProfile?.membership_tier) return "Free Member";
-    return "Verified Member";
-  };
 
   if (loading) {
     return (
@@ -209,16 +205,8 @@ const UserProfile = () => {
                         <h1 className="text-2xl font-semibold text-white">
                           {userProfile.full_name || userProfile.email}
                         </h1>
-                        {userProfile.membership_tier && (
-                          <Badge className="bg-green-500/20 text-green-500 border-green-500/30 w-max mt-1 sm:mt-0">
-                            Verified Member
-                          </Badge>
-                        )}
                       </div>
                       <p className="text-white/60 break-all">@{userProfile.handle || userProfile.full_name?.toLowerCase().replace(/\s+/g, '') || 'member'}</p>
-                      <Badge className="bg-gold/20 text-gold border-gold/30 font-medium mt-2 w-max">
-                        {getMembershipLevel()}
-                      </Badge>
                     </div>
                     {!isOwnProfile && (
                       <div className="sm:self-start">
@@ -232,14 +220,14 @@ const UserProfile = () => {
                     )}
                   </div>
 
-                  <div className="grid grid-cols-3 gap-3 text-center mt-6 sm:flex sm:justify-start sm:space-x-8">
-                    <div className="hover:bg-white/5 rounded-lg p-2 transition-colors w-full sm:flex-none">
+                  <div className="flex justify-center space-x-8 mt-6">
+                    <div className="hover:bg-white/5 rounded-lg p-2 transition-colors text-center">
                       <div className="text-xl font-bold text-white">{userPosts.length}</div>
                       <div className="text-white/60 text-sm">Posts</div>
                     </div>
                     <button
                       onClick={() => navigate(`/portal/user/${userId}/followers`)}
-                      className="hover:bg-white/5 rounded-lg p-2 transition-colors w-full sm:flex-none"
+                      className="hover:bg-white/5 rounded-lg p-2 transition-colors text-center"
                     >
                       <div className="text-xl font-bold text-white hover:text-gold transition-colors">
                         {followersCount.toLocaleString()}
@@ -248,7 +236,7 @@ const UserProfile = () => {
                     </button>
                     <button
                       onClick={() => navigate(`/portal/user/${userId}/following`)}
-                      className="hover:bg-white/5 rounded-lg p-2 transition-colors w-full sm:flex-none"
+                      className="hover:bg-white/5 rounded-lg p-2 transition-colors text-center"
                     >
                       <div className="text-xl font-bold text-white hover:text-gold transition-colors">
                         {followingCount.toLocaleString()}

@@ -252,14 +252,6 @@ const StoriesDisplay: React.FC = () => {
                         NSFW
                       </Badge>
                     )}
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-white hover:bg-white/20"
-                      onClick={() => setSelectedStory(null)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
                   </div>
                 </div>
                 

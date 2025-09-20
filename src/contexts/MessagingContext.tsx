@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '../integrations/supabase/client';
 import { Database } from '../integrations/supabase/types';
 import { useAuth } from './AuthContext';
@@ -53,6 +53,8 @@ interface MessagingContextType {
   // Real-time
   subscribeToMessages: () => void;
   unsubscribeFromMessages: () => void;
+  refreshSubscription: () => void;
+  testRealtimeMessage: () => void;
 }
 
 const MessagingContext = createContext<MessagingContextType | undefined>(undefined);
@@ -80,6 +82,14 @@ export const MessagingProvider: React.FC<MessagingProviderProps> = ({ children }
   const [subscription, setSubscription] = useState<any>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [isSearchingUsers, setIsSearchingUsers] = useState(false);
+  
+  // Use ref to track current conversation for real-time filtering
+  const currentConversationRef = useRef<Conversation | null>(null);
+  
+  // Update ref when current conversation changes
+  useEffect(() => {
+    currentConversationRef.current = currentConversation;
+  }, [currentConversation]);
 
   // Load conversations
   const loadConversations = useCallback(async () => {
@@ -98,6 +108,8 @@ export const MessagingProvider: React.FC<MessagingProviderProps> = ({ children }
       
       // Calculate total unread count
       const totalUnread = data?.reduce((sum, conv) => sum + conv.unread_count, 0) || 0;
+      console.log('📊 Conversations loaded:', data?.map(c => ({ user: c.other_user_id, unread: c.unread_count })));
+      console.log('📊 Total unread count:', totalUnread);
       setUnreadCount(totalUnread);
     } catch (err) {
       console.error('Error loading conversations:', err);
@@ -105,11 +117,68 @@ export const MessagingProvider: React.FC<MessagingProviderProps> = ({ children }
     }
   }, [user]);
 
+  // Mark entire conversation as read
+  const markConversationAsRead = useCallback(async (otherUserId: string) => {
+    if (!user) return;
+
+    try {
+      console.log('🔍 Marking conversation as read for user:', otherUserId);
+      
+      // First, let's check how many unread messages there are
+      const { data: unreadMessages, error: countError } = await supabase
+        .from('direct_messages')
+        .select('id, content, is_read')
+        .eq('recipient_id', user.id)
+        .eq('sender_id', otherUserId)
+        .eq('is_read', false);
+      
+      console.log('📊 Found unread messages:', unreadMessages?.length || 0, unreadMessages);
+      
+      // Use the database function to mark messages as read
+      const { error } = await supabase.rpc('mark_messages_as_read', {
+        p_user_id: user.id,
+        p_other_user_id: otherUserId
+      });
+
+      if (error) throw error;
+
+      console.log('✅ Messages marked as read in database');
+
+      // Update local state immediately
+      setMessages(prev => {
+        const updated = prev.map(msg => 
+          msg.recipient_id === user.id && msg.sender_id === otherUserId
+            ? { ...msg, is_read: true, read_at: new Date().toISOString() }
+            : msg
+        );
+        console.log('🔄 Updated messages in local state:', updated.map(m => ({ id: m.id, is_read: m.is_read, content: m.content })));
+        return updated;
+      });
+
+      // Update conversations list
+      console.log('🔄 Reloading conversations...');
+      await loadConversations();
+      console.log('✅ Conversations reloaded');
+      
+      // Force a small delay and reload again to ensure database consistency
+      setTimeout(async () => {
+        console.log('🔄 Force reloading conversations after delay...');
+        await loadConversations();
+        console.log('✅ Force reload completed');
+      }, 500);
+    } catch (err) {
+      console.error('Error marking conversation as read:', err);
+    }
+  }, [user, loadConversations]);
+
   // Select conversation and load messages
   const selectConversation = useCallback(async (conversation: Conversation) => {
     if (!user) return;
 
     try {
+      console.log('🔍 Selecting conversation for user:', conversation.other_user_id);
+      console.log('🔍 Current unread count before:', conversation.unread_count);
+      
       setCurrentConversation(conversation);
       setError(null);
 
@@ -128,12 +197,14 @@ export const MessagingProvider: React.FC<MessagingProviderProps> = ({ children }
       setMessages(data || []);
       
       // Mark conversation as read
-      await markConversationAsRead(conversation.conversation_id);
+      console.log('🔍 About to mark conversation as read...');
+      await markConversationAsRead(conversation.other_user_id);
+      console.log('✅ Conversation marked as read');
     } catch (err) {
       console.error('Error loading messages:', err);
       setError(err instanceof Error ? err.message : 'Failed to load messages');
     }
-  }, [user]);
+  }, [user, markConversationAsRead]);
 
   // Send message
   const sendMessage = useCallback(async (recipientId: string, content: string, imageUrl?: string) => {
@@ -226,29 +297,6 @@ export const MessagingProvider: React.FC<MessagingProviderProps> = ({ children }
     }
   }, [user]);
 
-  // Mark entire conversation as read
-  const markConversationAsRead = useCallback(async (conversationId: string) => {
-    if (!user) return;
-
-    try {
-      const { error } = await supabase
-        .from('direct_messages')
-        .update({ 
-          is_read: true, 
-          read_at: new Date().toISOString() 
-        })
-        .eq('recipient_id', user.id)
-        .eq('sender_id', conversationId)
-        .eq('is_read', false);
-
-      if (error) throw error;
-
-      // Update conversations list
-      await loadConversations();
-    } catch (err) {
-      console.error('Error marking conversation as read:', err);
-    }
-  }, [user, loadConversations]);
 
   // Add reaction to message
   const addReaction = useCallback(async (messageId: string, emoji: string) => {
@@ -348,25 +396,72 @@ export const MessagingProvider: React.FC<MessagingProviderProps> = ({ children }
   const subscribeToMessages = useCallback(() => {
     if (!user) return;
 
+    console.log('🔍 Setting up real-time subscription for user:', user.id);
+    console.log('Current conversation:', currentConversation);
+    console.log('Channel name:', 'messaging_context_' + user.id);
+
+    // Clean up existing subscription first
+    if (subscription) {
+      console.log('Cleaning up existing subscription');
+      supabase.removeChannel(subscription);
+      setSubscription(null);
+    }
+
     const channel = supabase
-      .channel('direct_messages')
+      .channel('messaging_context_' + user.id)
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'direct_messages',
-          filter: `or(sender_id.eq.${user.id},recipient_id.eq.${user.id})`
+          table: 'direct_messages'
         },
         (payload) => {
+          console.log('🎉 Real-time message received:', payload);
           const newMessage = payload.new as DirectMessage;
           
-          // Add to messages if it's for the current conversation
-          if (currentConversation && 
-              (newMessage.sender_id === currentConversation.other_user_id || 
-               newMessage.recipient_id === currentConversation.other_user_id)) {
-            setMessages(prev => [...prev, newMessage]);
+          // Filter messages for this user
+          if (newMessage.sender_id !== user.id && newMessage.recipient_id !== user.id) {
+            console.log('⚠️ Message not for this user, ignoring:', {
+              sender_id: newMessage.sender_id,
+              recipient_id: newMessage.recipient_id,
+              user_id: user.id
+            });
+            return;
           }
+          
+          console.log('✅ Message is for this user, processing:', {
+            id: newMessage.id,
+            sender_id: newMessage.sender_id,
+            recipient_id: newMessage.recipient_id,
+            content: newMessage.content,
+            current_conversation: currentConversationRef.current?.other_user_id
+          });
+          
+          // Add to messages if it's for the current conversation
+          setMessages(prev => {
+            // Check if message already exists to prevent duplicates
+            const exists = prev.some(msg => msg.id === newMessage.id);
+            if (exists) return prev;
+            
+            // Get current conversation from ref
+            const currentConv = currentConversationRef.current;
+            
+            // Only add message if it belongs to the current conversation
+            if (currentConv && 
+                (newMessage.sender_id === currentConv.other_user_id || 
+                 newMessage.recipient_id === currentConv.other_user_id)) {
+              console.log('✅ Adding message to current conversation:', newMessage.content);
+              return [...prev, newMessage];
+            } else {
+              console.log('⚠️ Message not added - no current conversation or not for current conversation');
+              console.log('Current conversation:', currentConv);
+              console.log('Message sender:', newMessage.sender_id);
+              console.log('Message recipient:', newMessage.recipient_id);
+            }
+            
+            return prev;
+          });
           
           // Update conversations list by updating the specific conversation
           setConversations(prev => prev.map(conv => {
@@ -383,7 +478,13 @@ export const MessagingProvider: React.FC<MessagingProviderProps> = ({ children }
           
           // Show notification for new messages
           if (newMessage.recipient_id === user.id) {
-            toast.info(`New message from ${newMessage.sender_id}`);
+            // Get sender name from conversations using functional update
+            setConversations(prev => {
+              const sender = prev.find(conv => conv.other_user_id === newMessage.sender_id);
+              const senderName = sender?.other_user_name || 'Unknown User';
+              toast.info(`New message from ${senderName}`);
+              return prev; // Don't actually change state, just get the name
+            });
           }
         }
       )
@@ -392,11 +493,16 @@ export const MessagingProvider: React.FC<MessagingProviderProps> = ({ children }
         {
           event: 'UPDATE',
           schema: 'public',
-          table: 'direct_messages',
-          filter: `or(sender_id.eq.${user.id},recipient_id.eq.${user.id})`
+          table: 'direct_messages'
         },
         (payload) => {
+          console.log('Real-time message updated:', payload);
           const updatedMessage = payload.new as DirectMessage;
+          
+          // Filter messages for this user
+          if (updatedMessage.sender_id !== user.id && updatedMessage.recipient_id !== user.id) {
+            return;
+          }
           
           // Update message in local state
           setMessages(prev => 
@@ -411,20 +517,38 @@ export const MessagingProvider: React.FC<MessagingProviderProps> = ({ children }
         {
           event: 'DELETE',
           schema: 'public',
-          table: 'direct_messages',
-          filter: `or(sender_id.eq.${user.id},recipient_id.eq.${user.id})`
+          table: 'direct_messages'
         },
         (payload) => {
+          console.log('Real-time message deleted:', payload);
           const deletedMessage = payload.old as DirectMessage;
+          
+          // Filter messages for this user
+          if (deletedMessage.sender_id !== user.id && deletedMessage.recipient_id !== user.id) {
+            return;
+          }
           
           // Remove message from local state
           setMessages(prev => prev.filter(msg => msg.id !== deletedMessage.id));
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Real-time subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Successfully subscribed to direct_messages real-time updates');
+          console.log('Subscription channel:', channel);
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Real-time subscription error');
+        } else if (status === 'TIMED_OUT') {
+          console.error('❌ Real-time subscription timed out');
+        } else if (status === 'CLOSED') {
+          console.warn('⚠️ Real-time subscription closed');
+        }
+      });
 
     setSubscription(channel);
-  }, [user, currentConversation, loadConversations]);
+    console.log('✅ Subscription created and set:', channel);
+  }, [user]); // Removed currentConversation to prevent subscription recreation
 
   // Unsubscribe from real-time messages
   const unsubscribeFromMessages = useCallback(() => {
@@ -441,16 +565,51 @@ export const MessagingProvider: React.FC<MessagingProviderProps> = ({ children }
     }
   }, [user, loadConversations]);
 
+  // Track if auto-refresh has been done for current user
+  const autoRefreshDoneRef = useRef<string | null>(null);
+
+  // Force refresh subscription
+  const refreshSubscription = useCallback(() => {
+    console.log('🔄 Force refreshing subscription...');
+    if (subscription) {
+      supabase.removeChannel(subscription);
+      setSubscription(null);
+    }
+    setTimeout(() => {
+      subscribeToMessages();
+    }, 100);
+  }, [subscription]);
+
   // Subscribe to real-time updates
   useEffect(() => {
     if (user) {
+      // Initial subscription
       subscribeToMessages();
+      
+      // Auto-refresh only once per user session
+      if (autoRefreshDoneRef.current !== user.id) {
+        autoRefreshDoneRef.current = user.id;
+        
+        const timeoutId = setTimeout(() => {
+          console.log('🔄 Auto-refreshing subscription on user login...');
+          refreshSubscription();
+        }, 1000);
+
+        return () => {
+          clearTimeout(timeoutId);
+          unsubscribeFromMessages();
+        };
+      }
+
+      return () => {
+        unsubscribeFromMessages();
+      };
     }
 
     return () => {
       unsubscribeFromMessages();
     };
-  }, [user, subscribeToMessages]);
+  }, [user?.id]); // Only depend on user.id to prevent re-runs
 
   // Search users for starting new conversations
   const searchUsers = useCallback(async (query: string) => {
@@ -533,6 +692,32 @@ export const MessagingProvider: React.FC<MessagingProviderProps> = ({ children }
     };
   }, []);
 
+  // Test function to manually trigger a real-time message
+  const testRealtimeMessage = useCallback(async () => {
+    if (!user) return;
+    
+    try {
+      console.log('🧪 Testing real-time message...');
+      const { data, error } = await supabase
+        .from('direct_messages')
+        .insert({
+          sender_id: user.id,
+          recipient_id: user.id, // Send to self for testing
+          content: `Test real-time message - ${new Date().toISOString()}`
+        })
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('❌ Test message failed:', error);
+      } else {
+        console.log('✅ Test message sent:', data);
+      }
+    } catch (err) {
+      console.error('❌ Test message error:', err);
+    }
+  }, [user]);
+
   const value: MessagingContextType = {
     conversations,
     currentConversation,
@@ -555,7 +740,9 @@ export const MessagingProvider: React.FC<MessagingProviderProps> = ({ children }
     searchUsers,
     startConversation,
     subscribeToMessages,
-    unsubscribeFromMessages
+    unsubscribeFromMessages,
+    refreshSubscription,
+    testRealtimeMessage
   };
 
   return (

@@ -145,11 +145,6 @@ const Profile = () => {
     });
   };
 
-  const getMembershipLevel = () => {
-    if (!subscribed) return "Free Member";
-    if (isTrialActive) return `Trial Member (${trialDaysRemaining} days left)`;
-    return "Verified Member";
-  };
 
   if (loading) {
     return (
@@ -198,16 +193,8 @@ const Profile = () => {
                     <h1 className="text-2xl font-semibold text-white">
                       {profile.full_name || user.email}
                     </h1>
-                    {subscribed && (
-                      <Badge className="bg-green-500/20 text-green-500 border-green-500/30">
-                        Verified Member
-                      </Badge>
-                    )}
                   </div>
                   <p className="text-white/60">@{profile.handle || profile.full_name?.toLowerCase().replace(/\s+/g, '') || 'member'}</p>
-                  <Badge className="bg-gold/20 text-gold border-gold/30 font-medium mt-2">
-                    {getMembershipLevel()}
-                  </Badge>
                 </div>
                 
                 <div className="flex space-x-2">
@@ -230,8 +217,8 @@ const Profile = () => {
                 </div>
               </div>
 
-              <div className="flex space-x-8 text-center">
-                <div>
+              <div className="flex justify-center space-x-8 text-center">
+                <div className="hover:bg-white/5 rounded-lg p-2 transition-colors">
                   <div className="text-xl font-bold text-white">{userPosts.length}</div>
                   <div className="text-white/60 text-sm">Posts</div>
                 </div>

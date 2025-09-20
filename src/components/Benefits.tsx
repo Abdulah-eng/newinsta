@@ -9,13 +9,13 @@ const Benefits = () => {
     },
     {
       icon: Users,
-      title: "Premium Networking",
+      title: "Professional Networking",
       description: "Connect with influential professionals and industry leaders"
     },
     {
       icon: Shield,
       title: "Private & Secure",
-      description: "Your privacy is our priority with secure, verified membership"
+      description: "Your privacy is our priority with secure membership"
     },
     {
       icon: Sparkles,

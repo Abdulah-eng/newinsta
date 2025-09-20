@@ -138,15 +138,6 @@ const FullScreenPostViewer: React.FC<FullScreenPostViewerProps> = ({
               </Button>
             )}
 
-            {/* Close Button */}
-            <Button
-              onClick={onClose}
-              variant="ghost"
-              size="icon"
-              className="absolute top-4 right-4 z-10 bg-black/50 hover:bg-black/70 text-white"
-            >
-              <X className="h-6 w-6" />
-            </Button>
 
             {/* Post Counter */}
             <div className="absolute top-4 left-4 z-10 bg-black/50 px-3 py-1 rounded-full text-white text-sm">

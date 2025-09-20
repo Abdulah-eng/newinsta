@@ -592,13 +592,13 @@ const Feed = () => {
                   </div>
                   
                   {/* Comment Section */}
-                  {subscribed && (
+                  {(subscribed || user?.id === post.author_id) && (
                     <div className="mt-4">
                       <CommentSection postId={post.id} />
                     </div>
                   )}
                   
-                  {!subscribed && (
+                  {!subscribed && user?.id !== post.author_id && (
                     <div className="text-white/50 text-sm text-center py-4 mt-4 border-t border-gold/20">
                       <p>Subscribe to interact with posts and comments</p>
                     </div>

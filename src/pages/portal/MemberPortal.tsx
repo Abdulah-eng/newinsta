@@ -1,6 +1,7 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { MemberPortalSidebar } from "@/components/MemberPortalSidebar";
 import TrialCountdown from "@/components/TrialCountdown";
+import NotificationCenter from "@/components/NotificationCenter";
 import { Outlet } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -28,12 +29,9 @@ const MemberPortal = () => {
               </h2>
             </div>
             
-            {/* Subscription Status Indicator */}
-            <div className="hidden sm:flex items-center space-x-2 shrink-0">
-              <div className={`w-2 h-2 rounded-full ${subscribed ? 'bg-green-500' : 'bg-yellow-500'}`} />
-              <span className={`text-xs md:text-sm font-medium ${subscribed ? 'text-green-500' : 'text-yellow-500'}`}>
-                {subscribed ? 'Premium Member' : 'Free Access'}
-              </span>
+            {/* Notifications */}
+            <div className="flex items-center space-x-3 shrink-0">
+              <NotificationCenter />
             </div>
           </header>
           <div className="p-4 md:p-6">

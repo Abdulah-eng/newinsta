@@ -68,10 +68,20 @@ const PostInteractions = ({
   }, [user, postId]);
 
   const handleLike = async () => {
-    if (!user || !subscribed) {
+    if (!user) {
+      toast({
+        title: "Login Required",
+        description: "Please log in to interact with posts.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Allow users to like their own posts, but require subscription for others
+    if (user.id !== authorId && !subscribed) {
       toast({
         title: "Subscription Required",
-        description: "You need an active subscription to interact with posts.",
+        description: "You need an active subscription to interact with other users' posts.",
         variant: "destructive",
       });
       return;
@@ -119,10 +129,20 @@ const PostInteractions = ({
   };
 
   const handleBookmark = async () => {
-    if (!user || !subscribed) {
+    if (!user) {
+      toast({
+        title: "Login Required",
+        description: "Please log in to interact with posts.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Allow users to bookmark their own posts, but require subscription for others
+    if (user.id !== authorId && !subscribed) {
       toast({
         title: "Subscription Required",
-        description: "You need an active subscription to bookmark posts.",
+        description: "You need an active subscription to interact with other users' posts.",
         variant: "destructive",
       });
       return;
@@ -186,11 +206,11 @@ const PostInteractions = ({
             variant="ghost"
             size="sm"
             onClick={handleLike}
-            disabled={loading || !subscribed}
+            disabled={loading || (user?.id !== authorId && !subscribed)}
             className={cn(
               "p-0 h-auto hover:bg-transparent",
               isLiked ? "text-red-500" : "text-white/60 hover:text-red-400",
-              !subscribed && "opacity-50"
+              (user?.id !== authorId && !subscribed) && "opacity-50"
             )}
           >
             <Heart 
@@ -205,7 +225,7 @@ const PostInteractions = ({
             disabled={!subscribed}
             className={cn(
               "p-0 h-auto text-white/60 hover:text-white hover:bg-transparent",
-              !subscribed && "opacity-50"
+              (user?.id !== authorId && !subscribed) && "opacity-50"
             )}
           >
             <MessageCircle className="h-6 w-6" />
@@ -226,11 +246,11 @@ const PostInteractions = ({
             variant="ghost"
             size="sm"
             onClick={handleBookmark}
-            disabled={loading || !subscribed}
+            disabled={loading || (user?.id !== authorId && !subscribed)}
             className={cn(
               "p-0 h-auto hover:bg-transparent",
               isBookmarked ? "text-gold" : "text-white/60 hover:text-gold",
-              !subscribed && "opacity-50"
+              (user?.id !== authorId && !subscribed) && "opacity-50"
             )}
           >
             <Bookmark 

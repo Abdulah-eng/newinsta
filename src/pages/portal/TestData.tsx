@@ -6,6 +6,9 @@ import { useStories } from "@/contexts/StoriesContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Database, Users, FileText, TestTube, Camera, Clock } from "lucide-react";
+import RealtimeTest from "@/components/RealtimeTest";
+import RealtimeDebugger from "@/components/RealtimeDebugger";
+import SimpleRealtimeTest from "@/components/SimpleRealtimeTest";
 
 const TestData = () => {
   const [loading, setLoading] = useState(false);
@@ -308,6 +311,36 @@ const TestData = () => {
           </Card>
         ))}
       </div>
+
+      {/* Real-time Messaging Test */}
+      <Card className="bg-charcoal border-gold/20 mt-8">
+        <CardHeader>
+          <CardTitle className="text-gold">Real-time Messaging Test</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <RealtimeTest />
+        </CardContent>
+      </Card>
+
+      {/* Real-time Debugger */}
+      <Card className="bg-charcoal border-gold/20 mt-8">
+        <CardHeader>
+          <CardTitle className="text-gold">Real-time Debugger</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <RealtimeDebugger />
+        </CardContent>
+      </Card>
+
+      {/* Simple Real-time Test */}
+      <Card className="bg-charcoal border-gold/20 mt-8">
+        <CardHeader>
+          <CardTitle className="text-gold">Simple Real-time Test</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <SimpleRealtimeTest />
+        </CardContent>
+      </Card>
 
       {/* Test Instructions */}
       <Card className="bg-charcoal border-gold/20 mt-8">

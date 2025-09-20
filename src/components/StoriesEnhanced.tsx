@@ -297,9 +297,6 @@ const StoriesEnhanced: React.FC<StoriesEnhancedProps> = ({ className }) => {
                       </AlertDialogContent>
                     </AlertDialog>
                   )}
-                  <Button variant="ghost" size="icon" className="text-white hover:bg-white/20" onClick={closeStory}>
-                    <X className="h-4 w-4" />
-                  </Button>
                 </div>
               </div>
 

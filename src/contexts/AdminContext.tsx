@@ -50,6 +50,7 @@ interface AdminContextType {
   loadUsers: () => Promise<void>;
   banUser: (userId: string, reason: string, duration?: number) => Promise<void>;
   unbanUser: (userId: string) => Promise<void>;
+  deleteUser: (userId: string, reason: string) => Promise<void>;
   hideUser: (userId: string, reason: string) => Promise<void>;
   unhideUser: (userId: string) => Promise<void>;
   setAgeVerified: (userId: string, verified: boolean) => Promise<void>;
@@ -260,6 +261,44 @@ export const AdminProvider: React.FC<AdminProviderProps> = ({ children }) => {
       console.error('Error unbanning user:', err);
       setError(err instanceof Error ? err.message : 'Failed to unban user');
       toast.error('Failed to unban user');
+    }
+  }, [isAdmin, user]);
+
+  // Delete user
+  const deleteUser = useCallback(async (userId: string, reason: string) => {
+    if (!isAdmin || !user) return;
+
+    try {
+      setError(null);
+      console.log('Starting user deletion for:', userId);
+
+      // Use the database function to delete user (bypasses RLS)
+      const { data, error } = await supabase.rpc('admin_delete_user', {
+        p_user_id: userId,
+        p_reason: reason
+      });
+
+      if (error) {
+        console.error('Error calling admin_delete_user function:', error);
+        throw error;
+      }
+
+      if (!data || !data.success) {
+        const errorMessage = data?.error || 'Failed to delete user';
+        console.error('Delete user function returned error:', errorMessage);
+        throw new Error(errorMessage);
+      }
+
+      console.log('User deleted successfully:', data);
+
+      // Update local state
+      setUsers(prev => prev.filter(u => u.id !== userId));
+
+      toast.success('User account deleted successfully');
+    } catch (err) {
+      console.error('Error deleting user:', err);
+      setError(err instanceof Error ? err.message : 'Failed to delete user');
+      toast.error('Failed to delete user');
     }
   }, [isAdmin, user]);
 
@@ -884,6 +923,7 @@ export const AdminProvider: React.FC<AdminProviderProps> = ({ children }) => {
     loadUsers,
     banUser,
     unbanUser,
+    deleteUser,
     hideUser,
     unhideUser,
     setAgeVerified,

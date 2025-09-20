@@ -14,7 +14,7 @@ import { Textarea } from '../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Calendar } from '../components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover';
-import { CalendarIcon, Ban, Shield, Eye, EyeOff, CheckCircle, XCircle, AlertTriangle, Users, Flag, Activity, CreditCard } from 'lucide-react';
+import { CalendarIcon, Ban, Shield, CheckCircle, XCircle, AlertTriangle, Users, Flag, Activity, CreditCard, UserX } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '../lib/utils';
 
@@ -32,6 +32,7 @@ const AdminDashboard: React.FC = () => {
     loadAuditLogs,
     banUser,
     unbanUser,
+    deleteUser,
     setAgeVerified,
     resolveReport,
     hidePost,
@@ -58,6 +59,8 @@ const AdminDashboard: React.FC = () => {
   const [restrictionType, setRestrictionType] = useState<'posting' | 'messaging' | 'commenting' | 'all'>('all');
   const [restrictionReason, setRestrictionReason] = useState('');
   const [restrictionExpires, setRestrictionExpires] = useState<Date | undefined>();
+  const [deleteUserDialog, setDeleteUserDialog] = useState<any>(null);
+  const [deleteReason, setDeleteReason] = useState('');
 
   // Check if user is admin
   if (!profile?.is_admin && !profile?.is_moderator && !profile?.is_super_admin) {
@@ -87,6 +90,14 @@ const AdminDashboard: React.FC = () => {
 
   const handleUnbanUser = async (userId: string) => {
     await unbanUser(userId);
+  };
+
+  const handleDeleteUser = async () => {
+    if (!deleteUserDialog || !deleteReason) return;
+    
+    await deleteUser(deleteUserDialog.id, deleteReason);
+    setDeleteUserDialog(null);
+    setDeleteReason('');
   };
 
   const handleResolveReport = async () => {
@@ -252,7 +263,6 @@ const AdminDashboard: React.FC = () => {
                     <TableRow>
                       <TableHead>User</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Posts</TableHead>
                       <TableHead>Followers</TableHead>
                       <TableHead>Age Verified</TableHead>
                       <TableHead>Actions</TableHead>
@@ -281,7 +291,6 @@ const AdminDashboard: React.FC = () => {
                             <Badge className="bg-green-100 text-green-800">Active</Badge>
                           )}
                         </TableCell>
-                        <TableCell>{user.post_count}</TableCell>
                         <TableCell>{user.follower_count}</TableCell>
                         <TableCell>
                           {user.age_verified ? (
@@ -327,18 +336,6 @@ const AdminDashboard: React.FC = () => {
                               Restrict
                             </Button>
 
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => setAgeVerified(user.id, !user.age_verified)}
-                            >
-                              {user.age_verified ? (
-                                <EyeOff className="h-4 w-4 mr-1" />
-                              ) : (
-                                <Eye className="h-4 w-4 mr-1" />
-                              )}
-                              {user.age_verified ? 'Unverify' : 'Verify'}
-                            </Button>
 
                             {user.stripe_customer_id && (
                               <Button
@@ -350,6 +347,19 @@ const AdminDashboard: React.FC = () => {
                                 Stripe
                               </Button>
                             )}
+
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setDeleteUserDialog(user);
+                                setDeleteReason('');
+                              }}
+                              className="text-red-400 hover:text-red-300 hover:border-red-400"
+                            >
+                              <UserX className="h-4 w-4 mr-1" />
+                              Delete
+                            </Button>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -773,6 +783,41 @@ const AdminDashboard: React.FC = () => {
               </Button>
               <Button onClick={handleAddRestriction}>
                 Add Restriction
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete User Dialog */}
+        <Dialog open={!!deleteUserDialog} onOpenChange={() => setDeleteUserDialog(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete User Account</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete this account? This action will permanently remove the user and all their data including posts, messages, stories, and reports. This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="delete-reason">Reason for deletion</Label>
+                <Input
+                  id="delete-reason"
+                  value={deleteReason}
+                  onChange={(e) => setDeleteReason(e.target.value)}
+                  placeholder="Enter reason for deletion..."
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDeleteUserDialog(null)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleDeleteUser}
+                disabled={!deleteReason.trim()}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Delete Account
               </Button>
             </DialogFooter>
           </DialogContent>

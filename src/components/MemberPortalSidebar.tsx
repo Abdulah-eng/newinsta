@@ -112,7 +112,7 @@ export function MemberPortalSidebar() {
               className="w-full text-gold hover:text-gold-light hover:bg-gold/10 border border-gold/30"
             >
               <Crown className="mr-2 h-4 w-4" />
-              {!collapsed && <span>Upgrade to Premium</span>}
+              {!collapsed && <span>Membership</span>}
             </SidebarMenuButton>
           )}
           <SidebarMenuButton

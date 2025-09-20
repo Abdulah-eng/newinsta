@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useMessaging } from '../../contexts/MessagingContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../integrations/supabase/client';
@@ -35,6 +35,7 @@ const Messages: React.FC = () => {
     searchUsers,
     startConversation,
     setCurrentConversation,
+    refreshSubscription,
   } = useMessaging();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -46,6 +47,9 @@ const Messages: React.FC = () => {
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   // Removed isLoadingUsers state for better UX
+  
+  // Ref for auto-scrolling to bottom
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const emojis = ['❤️', '👍', '😂', '😢', '😡', '😍', '🤔', '👏'];
 
@@ -71,6 +75,11 @@ const Messages: React.FC = () => {
     loadConversations();
     loadAllUsers();
   }, [loadConversations, loadAllUsers]);
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   const handleSendMessage = async (e?: React.MouseEvent) => {
     e?.preventDefault();
@@ -128,14 +137,26 @@ const Messages: React.FC = () => {
   // Get current user info for display
   const currentUser = selectedUserId ? allUsers.find(u => u.id === selectedUserId) : null;
 
+  // Create a map of user IDs to unread counts
+  const userUnreadCounts = useMemo(() => {
+    return conversations.reduce((acc, conv) => {
+      acc[conv.other_user_id] = conv.unread_count;
+      return acc;
+    }, {} as Record<string, number>);
+  }, [conversations]);
+
   // Removed loading screen for better UX
 
   return (
     <div className="min-h-screen bg-black">
       <div className="max-w-7xl mx-auto p-4 md:p-6">
         <div className="mb-4 md:mb-6">
-          <h1 className="text-2xl md:text-3xl font-bold text-gold font-serif">Messages</h1>
-          <p className="text-white/70 text-sm md:text-base">Connect with other members</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-gold font-serif">Messages</h1>
+              <p className="text-white/70 text-sm md:text-base">Connect with other members</p>
+            </div>
+          </div>
         </div>
 
         {error && (
@@ -179,22 +200,30 @@ const Messages: React.FC = () => {
                         onClick={(e) => handleUserSelect(user.id, e)}
                       >
                         <div className="flex items-center space-x-3">
-                          <Avatar className="h-8 w-8 md:h-10 md:w-10">
-                            <AvatarImage src={user.avatar_url || undefined} />
-                            <AvatarFallback>
-                              {user.full_name.charAt(0).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
+                          <div className="relative">
+                            <Avatar className="h-8 w-8 md:h-10 md:w-10">
+                              <AvatarImage src={user.avatar_url || undefined} />
+                              <AvatarFallback>
+                                {user.full_name.charAt(0).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            {/* Notification badge for unread messages */}
+                            {userUnreadCounts[user.id] > 0 && (
+                              <Badge 
+                                variant="destructive" 
+                                className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
+                              >
+                                {userUnreadCounts[user.id] > 99 ? '99+' : userUnreadCounts[user.id]}
+                              </Badge>
+                            )}
+                          </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between">
                               <p className="text-sm md:text-base font-medium text-gray-100 truncate">
                                 {user.full_name}
                               </p>
-                              {user.membership_tier && (
-                                <Badge variant="secondary" className="text-[10px] md:text-xs">
-                                  {user.membership_tier}
-                                </Badge>
-                              )}
+                              <div className="flex items-center space-x-2">
+                              </div>
                             </div>
                             {user.handle && (
                               <p className="text-xs md:text-sm text-gray-400 truncate">
@@ -253,11 +282,6 @@ const Messages: React.FC = () => {
                         {currentUser.handle ? `@${currentUser.handle}` : 'Online'}
                       </CardDescription>
                     </div>
-                    {currentUser.membership_tier && (
-                      <Badge variant="secondary" className="ml-auto bg-gold/20 text-gold border-gold/30 text-[10px] md:text-xs">
-                        {currentUser.membership_tier}
-                      </Badge>
-                    )}
                   </div>
                 </CardHeader>
                 <CardContent className="p-0">
@@ -290,11 +314,11 @@ const Messages: React.FC = () => {
                                 {format(new Date(message.created_at), 'HH:mm')}
                               </p>
                               {message.sender_id === user?.id && (
-                                <div className="flex space-x-1">
+                                <div className="flex">
                                   {message.is_read ? (
-                                    <span className="text-[10px] md:text-xs opacity-70">✓✓</span>
+                                    <span className="text-[10px] md:text-xs text-blue-400 tracking-tight">✓✓</span>
                                   ) : (
-                                    <span className="text-[10px] md:text-xs opacity-70">✓</span>
+                                    <span className="text-[10px] md:text-xs text-gray-400">✓</span>
                                   )}
                                 </div>
                               )}
@@ -302,6 +326,8 @@ const Messages: React.FC = () => {
                           </div>
                         </div>
                       ))}
+                      {/* Auto-scroll target */}
+                      <div ref={messagesEndRef} />
                     </div>
                   </ScrollArea>
                   
